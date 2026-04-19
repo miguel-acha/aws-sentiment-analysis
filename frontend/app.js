@@ -70,6 +70,16 @@ const newAnalysisBtn  = $('new-analysis-btn');
 const downloadBtn     = $('download-btn');
 const filterTabs      = document.querySelectorAll('.filter-tab');
 
+// ─── Rebind cursor hover on dynamic elements ───────────────────────────────
+function rebindCursorHover() {
+  const follower = document.getElementById('cursor-follower');
+  if (!follower) return;
+  document.querySelectorAll('.song-card, .stat-card, .chart-card').forEach(el => {
+    el.addEventListener('mouseenter', () => follower.classList.add('hovered'));
+    el.addEventListener('mouseleave', () => follower.classList.remove('hovered'));
+  });
+}
+
 // Chart instances (para destruir antes de re-renderizar)
 let gaugeChartInstance = null;
 let donutChartInstance = null;
@@ -81,6 +91,7 @@ let currentTracks = [];
 demoBtn.addEventListener('click', () => {
   urlInput.value = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M';
   urlInput.focus();
+  urlInput.select();
 });
 
 // ─── Nueva búsqueda ───────────────────────────────────────────────────────────
@@ -192,16 +203,20 @@ function renderResults(data) {
   $('playlist-owner').textContent = playlist.owner || '';
   $('track-count').textContent = `${summary.total} canciones analizadas`;
 
-  // Dominant badge
+  // Dominant badge (no emojis)
   const badge = $('dominant-badge');
+  const vibeLabel = summary.vibe_label
+    ? summary.vibe_label.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
+    : summary.dominant;
   const domMap = {
-    POSITIVE: { emoji: '🌟', text: summary.vibe_label, cls: '' },
-    NEUTRAL:  { emoji: '😐', text: summary.vibe_label, cls: 'neutral' },
-    NEGATIVE: { emoji: '😢', text: summary.vibe_label, cls: 'negative' },
+    POSITIVE: { icon: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>', text: vibeLabel, cls: '' },
+    NEUTRAL:  { icon: '<path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="10"/>', text: vibeLabel, cls: 'neutral' },
+    NEGATIVE: { icon: '<path d="M12 22a10 10 0 100-20 10 10 0 000 20z"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>', text: vibeLabel, cls: 'negative' },
   };
   const dom = domMap[summary.dominant] || domMap.NEUTRAL;
-  $('dominant-emoji').textContent = dom.emoji;
-  $('dominant-text').textContent  = dom.text;
+  const badgeIconEl = $('badge-icon');
+  if (badgeIconEl) badgeIconEl.innerHTML = dom.icon;
+  $('dominant-text').textContent = dom.text;
   badge.className = `dominant-badge ${dom.cls}`;
 
   // Download button
@@ -227,6 +242,11 @@ function renderResults(data) {
   // Reset filter tabs
   filterTabs.forEach(t => t.classList.remove('active'));
   filterTabs[0].classList.add('active');
+
+  // Trigger GSAP entrance
+  if (typeof window.animateResultsIn === 'function') {
+    window.animateResultsIn();
+  }
 }
 
 // ─── Gauge Chart (Speedometer) ────────────────────────────────────────────────
@@ -292,13 +312,17 @@ function renderGauge(score, label) {
     }
   });
 
-  // Actualizar texto central
+  // Actualizar texto central con animación
   const scoreEl = $('gauge-score');
   const labelEl = $('gauge-label');
-  scoreEl.textContent = (score >= 0 ? '+' : '') + score.toFixed(2);
   scoreEl.style.color = needleColor;
-  if (labelEl) labelEl.textContent = label;
-  $('gauge-label').textContent = label;
+  const cleanLabel = label ? label.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim() : '—';
+  if (labelEl) labelEl.textContent = cleanLabel;
+  if (typeof window.animateGaugeScore === 'function') {
+    window.animateGaugeScore(scoreEl, score);
+  } else {
+    scoreEl.textContent = (score >= 0 ? '+' : '') + score.toFixed(2);
+  }
 }
 
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
@@ -306,9 +330,9 @@ function renderDonut(percentages, counts) {
   if (donutChartInstance) donutChartInstance.destroy();
 
   const sentiments = ['POSITIVE', 'NEUTRAL', 'NEGATIVE'];
-  const labels     = ['😊 Positiva', '😐 Neutral', '😢 Negativa'];
-  const colors     = ['rgba(29,185,84,0.85)', 'rgba(83,83,83,0.75)', 'rgba(232,100,90,0.85)'];
-  const borders    = ['#1DB954', '#535353', '#E8645A'];
+  const labels     = ['Positiva', 'Neutral', 'Negativa'];
+  const colors     = ['rgba(29,185,84,0.85)', 'rgba(107,107,107,0.75)', 'rgba(232,100,90,0.85)'];
+  const borders    = ['#1DB954', '#6b6b6b', '#E8645A'];
   const data       = sentiments.map(s => percentages[s] || 0);
 
   Chart.register(ChartDataLabels);
@@ -368,18 +392,25 @@ function renderStats(summary) {
   const { percentages, counts } = summary;
   const row = $('stats-row');
   const items = [
-    { emoji: '😊', label: 'POSITIVAS', sentiment: 'POSITIVE', cls: 'positive' },
-    { emoji: '😐', label: 'NEUTRAS',   sentiment: 'NEUTRAL',  cls: 'neutral' },
-    { emoji: '😢', label: 'NEGATIVAS', sentiment: 'NEGATIVE', cls: 'negative' },
+    { label: 'POSITIVAS', sentiment: 'POSITIVE', cls: 'positive' },
+    { label: 'NEUTRAS',   sentiment: 'NEUTRAL',  cls: 'neutral' },
+    { label: 'NEGATIVAS', sentiment: 'NEGATIVE', cls: 'negative' },
   ];
-  row.innerHTML = items.map(({ emoji, label, sentiment, cls }) => `
-    <div class="stat-card">
-      <div class="stat-emoji">${emoji}</div>
-      <div class="stat-value ${cls}">${(percentages[sentiment] || 0).toFixed(1)}%</div>
+  row.innerHTML = items.map(({ label, sentiment, cls }) => `
+    <div class="stat-card ${cls}" role="listitem">
+      <div class="stat-value ${cls}" data-target="${(percentages[sentiment] || 0).toFixed(1)}">0.0%</div>
       <div class="stat-label">${label}</div>
       <div class="stat-count">${counts[sentiment] || 0} de ${summary.total} canciones</div>
     </div>
   `).join('');
+
+  // Animate counters
+  if (typeof window.animateCounter === 'function') {
+    row.querySelectorAll('.stat-value[data-target]').forEach(el => {
+      const target = parseFloat(el.dataset.target);
+      window.animateCounter(el, target, '%');
+    });
+  }
 }
 
 // ─── Song Cards ───────────────────────────────────────────────────────────────
@@ -389,25 +420,31 @@ function renderSongCards(tracks, filter = 'ALL') {
     : tracks.filter(t => t.sentiment === filter || (filter !== 'POSITIVE' && filter !== 'NEUTRAL' && filter !== 'NEGATIVE'));
 
   if (filtered.length === 0) {
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--white-30);padding:3rem;">
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--white-25);padding:3rem;font-size:.9rem;">
       No hay canciones ${filter === 'POSITIVE' ? 'positivas' : filter === 'NEGATIVE' ? 'negativas' : 'neutras'} en esta playlist.
     </div>`;
     return;
   }
 
+  const chipLabel = { POSITIVE: 'Positivo', NEUTRAL: 'Neutral', NEGATIVE: 'Negativo', MIXED: 'Mixto' };
+
   grid.innerHTML = filtered.map((t, i) => {
     const sentiment = t.sentiment === 'MIXED' ? 'NEUTRAL' : (t.sentiment || 'NEUTRAL');
-    const chipLabel = { POSITIVE: '😊 Positivo', NEUTRAL: '😐 Neutral', NEGATIVE: '😢 Negativo', MIXED: '🔀 Mixto' }[t.sentiment] || 'Neutral';
     return `
-    <div class="song-card" style="animation-delay:${Math.min(i * 0.03, 0.5)}s">
-      <span class="song-num">${filtered.indexOf(t) + 1}</span>
+    <div class="song-card" role="listitem">
+      <span class="song-num">${i + 1}</span>
       <div class="song-info">
         <div class="song-name" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
         <div class="song-artist">${escHtml(t.artist)}</div>
       </div>
-      <span class="sentiment-chip chip-${sentiment}">${chipLabel}</span>
+      <span class="sentiment-chip chip-${sentiment}">${chipLabel[t.sentiment] || 'Neutral'}</span>
     </div>`;
   }).join('');
+
+  // Trigger stagger animation
+  if (typeof window.animateSongCards === 'function') {
+    window.animateSongCards();
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -3,28 +3,45 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Spotify Sentiment Analyzer — ¿Cuál es tu vibe?</title>
-  <meta name="description" content="Analizá el sentimiento de cualquier playlist de Spotify con inteligencia artificial. Descubrí si tu música es positiva, neutra o melancólica." />
+  <title>VibeCheck — Spotify Sentiment Analyzer</title>
+  <meta name="description" content="Analiza el sentimiento de cualquier playlist de Spotify con inteligencia artificial de Amazon Comprehend." />
+
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,300;1,14..32,400&display=swap" rel="stylesheet" />
+
+  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ═══════════════════════════════════════════════════ HERO / INPUT ══ -->
+  <!-- Custom cursor -->
+  <div id="cursor" class="cursor"></div>
+  <div id="cursor-follower" class="cursor-follower"></div>
+
+  <!-- Noise overlay -->
+  <div class="noise-overlay" aria-hidden="true"></div>
+
+  <!-- ══════════════════════════════════════════════ HERO ══ -->
   <section id="hero" class="hero">
-    <div class="hero-bg-orbs">
+    <canvas id="particle-canvas" class="particle-canvas" aria-hidden="true"></canvas>
+
+    <div class="hero-bg-orbs" aria-hidden="true">
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
       <div class="orb orb-3"></div>
     </div>
 
     <div class="hero-content">
-      <div class="logo-wrap">
-        <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor">
+
+      <div class="logo-wrap reveal-fade">
+        <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor" aria-label="Spotify">
           <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
         </svg>
         <div class="logo-text">
@@ -34,164 +51,205 @@
       </div>
 
       <h1 class="hero-headline">
-        ¿Cuál es la<br />
-        <span class="gradient-text">vibra de tu playlist?</span>
+        <span class="headline-line reveal-slide">Descubre el</span>
+        <span class="headline-line reveal-slide delay-1">
+          <span class="gradient-text">alma de tu música</span>
+        </span>
       </h1>
-      <p class="hero-sub">
-        Analizamos cada canción con <strong>Amazon Comprehend</strong> y te contamos si tu música<br />
-        tiende a ser positiva 🌟, neutral 😐 o melancólica 😢
+
+      <p class="hero-sub reveal-fade delay-2">
+        Cada playlist cuenta una historia. Usamos <strong>Amazon Comprehend</strong> para leer entre líneas y revelar si tu música es radiante, introspectiva o melancólica.
       </p>
 
-      <form id="analyze-form" class="input-card" autocomplete="off">
-        <div class="input-group">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <form id="analyze-form" class="input-card reveal-scale delay-3" autocomplete="off">
+        <div class="input-group" id="input-group-main">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M9 18V5l12-2v13"/>
             <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
           </svg>
           <input
             id="playlist-url"
             type="text"
-            placeholder="Pegá la URL de tu playlist de Spotify…"
+            placeholder="Pega el link de tu playlist de Spotify..."
             spellcheck="false"
             required
+            aria-label="URL de la playlist de Spotify"
           />
+          <div class="input-glow" aria-hidden="true"></div>
         </div>
-        <div class="form-options">
-          <label class="option-label">
-            <span>Máximo de canciones:</span>
-            <select id="max-tracks">
-              <option value="20">20 canciones (rápido)</option>
-              <option value="50" selected>50 canciones</option>
-              <option value="100">100 canciones</option>
+
+        <div class="form-bottom">
+          <label class="option-label" for="max-tracks">
+            <span>Canciones a analizar</span>
+            <select id="max-tracks" aria-label="Máximo de canciones">
+              <option value="20">20 — rápido</option>
+              <option value="50" selected>50 — recomendado</option>
+              <option value="100">100 — completo</option>
             </select>
           </label>
+
+          <button id="analyze-btn" type="submit" class="btn-analyze" aria-label="Analizar playlist">
+            <span class="btn-text">Analizar</span>
+            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+            <div class="btn-shine" aria-hidden="true"></div>
+          </button>
         </div>
-        <button id="analyze-btn" type="submit" class="btn-analyze">
-          <span class="btn-text">Analizar Playlist</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-          </svg>
-        </button>
       </form>
 
-      <p class="hero-hint">
-        Ejemplo:
-        <button class="hint-url" id="demo-btn" type="button">
-          open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+      <p class="hero-hint reveal-fade delay-4">
+        <span>Prueba con</span>
+        <button class="hint-url" id="demo-btn" type="button" aria-label="Usar playlist de ejemplo">
+          Today's Top Hits — Spotify
         </button>
       </p>
+
     </div>
   </section>
 
-  <!-- ════════════════════════════════════════════════════ LOADING STATE ══ -->
-  <section id="loading" class="loading-section hidden">
+  <!-- ══════════════════════════════════════════════ LOADING ══ -->
+  <section id="loading" class="loading-section hidden" aria-live="polite" aria-label="Cargando análisis">
     <div class="loading-content">
-      <div class="audio-bars">
+      <div class="waveform" aria-hidden="true">
         <span></span><span></span><span></span><span></span><span></span>
-        <span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
       </div>
-      <h2 class="loading-title">Analizando tu playlist…</h2>
-      <div class="loading-steps">
-        <div class="load-step" id="step-spotify">
-          <div class="step-dot"></div>
-          <span>Obteniendo canciones de Spotify</span>
+      <h2 class="loading-title">Analizando tu playlist</h2>
+      <p class="loading-sub">Esto puede tomar algunos segundos</p>
+      <div class="loading-steps" role="list">
+        <div class="load-step" id="step-spotify" role="listitem">
+          <div class="step-indicator">
+            <div class="step-ring"></div>
+            <div class="step-dot"></div>
+          </div>
+          <div class="step-text">
+            <span class="step-label">Spotify API</span>
+            <span class="step-desc">Obteniendo las canciones</span>
+          </div>
         </div>
-        <div class="load-step" id="step-comprehend">
-          <div class="step-dot"></div>
-          <span>Analizando sentimientos con Amazon Comprehend</span>
+        <div class="step-connector" aria-hidden="true"></div>
+        <div class="load-step" id="step-comprehend" role="listitem">
+          <div class="step-indicator">
+            <div class="step-ring"></div>
+            <div class="step-dot"></div>
+          </div>
+          <div class="step-text">
+            <span class="step-label">Amazon Comprehend</span>
+            <span class="step-desc">Procesando sentimientos con IA</span>
+          </div>
         </div>
-        <div class="load-step" id="step-chart">
-          <div class="step-dot"></div>
-          <span>Generando tu reporte visual</span>
+        <div class="step-connector" aria-hidden="true"></div>
+        <div class="load-step" id="step-chart" role="listitem">
+          <div class="step-indicator">
+            <div class="step-ring"></div>
+            <div class="step-dot"></div>
+          </div>
+          <div class="step-text">
+            <span class="step-label">Visualización</span>
+            <span class="step-desc">Generando tu reporte</span>
+          </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ════════════════════════════════════════════════════════ RESULTS ══ -->
+  <!-- ══════════════════════════════════════════════ RESULTS ══ -->
   <section id="results" class="results-section hidden">
 
     <!-- Playlist Header -->
     <div class="results-header">
       <div class="playlist-meta">
-        <img id="playlist-img" src="" alt="Playlist cover" class="playlist-cover" />
+        <div class="playlist-cover-wrap">
+          <img id="playlist-img" src="" alt="Portada de la playlist" class="playlist-cover" />
+          <div class="playlist-cover-glow" aria-hidden="true"></div>
+        </div>
         <div class="playlist-info">
-          <span class="playlist-label">PLAYLIST</span>
+          <span class="playlist-label">Playlist analizada</span>
           <h2 id="playlist-name" class="playlist-name">—</h2>
           <div class="playlist-details">
             <span id="playlist-owner"></span>
-            <span class="dot-sep">·</span>
+            <span class="dot-sep" aria-hidden="true">·</span>
             <span id="track-count"></span>
           </div>
         </div>
       </div>
       <div id="dominant-badge" class="dominant-badge">
-        <span id="dominant-emoji">🌟</span>
+        <div class="badge-icon-wrap">
+          <svg id="badge-icon" class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
+        </div>
         <div>
-          <div class="dominant-label">VIBE DOMINANTE</div>
+          <div class="dominant-label">Vibe dominante</div>
           <div id="dominant-text" class="dominant-text">—</div>
         </div>
       </div>
     </div>
 
-    <!-- ── Charts Row ── -->
+    <!-- Charts -->
     <div class="charts-grid">
-
-      <!-- Gauge -->
       <div class="chart-card" id="gauge-card">
-        <h3 class="chart-title">Vibe Meter</h3>
+        <div class="chart-card-header">
+          <h3 class="chart-title">Medidor de Vibe</h3>
+          <div class="chart-badge">Score</div>
+        </div>
         <div class="gauge-wrap">
-          <canvas id="gaugeChart"></canvas>
+          <canvas id="gaugeChart" aria-label="Medidor de sentimiento"></canvas>
           <div class="gauge-center">
             <div id="gauge-score" class="gauge-score">0.00</div>
             <div id="gauge-label" class="gauge-label-text">—</div>
           </div>
         </div>
-        <div class="gauge-axis">
-          <span class="axis-neg">😢 Depresiva</span>
-          <span class="axis-pos">Positiva 🌟</span>
+        <div class="gauge-axis" aria-hidden="true">
+          <span class="axis-neg">Melancólica</span>
+          <span class="axis-pos">Radiante</span>
         </div>
       </div>
 
-      <!-- Donut -->
       <div class="chart-card" id="donut-card">
-        <h3 class="chart-title">Distribución de Sentimientos</h3>
-        <div class="donut-wrap">
-          <canvas id="donutChart"></canvas>
+        <div class="chart-card-header">
+          <h3 class="chart-title">Distribución</h3>
+          <div class="chart-badge">Sentimientos</div>
         </div>
-        <div class="donut-legend" id="donut-legend"></div>
+        <div class="donut-wrap">
+          <canvas id="donutChart" aria-label="Distribución de sentimientos"></canvas>
+        </div>
+        <div class="donut-legend" id="donut-legend" role="list"></div>
       </div>
-
     </div>
 
-    <!-- ── Stats Row ── -->
-    <div class="stats-row" id="stats-row"></div>
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row" role="list"></div>
 
-    <!-- ── Song Cards ── -->
+    <!-- Songs -->
     <div class="songs-section">
       <div class="songs-header">
-        <h3 class="section-title">Canciones Analizadas</h3>
-        <div class="filter-tabs" id="filter-tabs">
+        <div>
+          <h3 class="section-title">Canciones analizadas</h3>
+          <p class="section-sub">Cada pista procesada por IA</p>
+        </div>
+        <div class="filter-tabs" id="filter-tabs" role="group" aria-label="Filtrar por sentimiento">
           <button class="filter-tab active" data-filter="ALL">Todas</button>
-          <button class="filter-tab" data-filter="POSITIVE">😊 Positivas</button>
-          <button class="filter-tab" data-filter="NEUTRAL">😐 Neutras</button>
-          <button class="filter-tab" data-filter="NEGATIVE">😢 Negativas</button>
+          <button class="filter-tab" data-filter="POSITIVE">Positivas</button>
+          <button class="filter-tab" data-filter="NEUTRAL">Neutras</button>
+          <button class="filter-tab" data-filter="NEGATIVE">Negativas</button>
         </div>
       </div>
-      <div class="songs-grid" id="songs-grid"></div>
+      <div class="songs-grid" id="songs-grid" role="list"></div>
     </div>
 
-    <!-- ── Actions ── -->
+    <!-- Actions -->
     <div class="actions-row">
-      <a id="download-btn" href="#" class="btn-secondary" download="vibe-report.png">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <a id="download-btn" href="#" class="btn-secondary" download="vibe-report.png" aria-label="Descargar reporte PNG">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
           <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
-        Descargar Reporte PNG
+        Descargar Reporte
       </a>
-      <button class="btn-primary" id="new-analysis-btn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <button class="btn-primary" id="new-analysis-btn" aria-label="Nueva búsqueda">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
           <polyline points="1 4 1 10 7 10"/>
           <path d="M3.51 15a9 9 0 1 0 .49-3.96"/>
         </svg>
@@ -201,9 +259,9 @@
 
   </section>
 
-  <!-- ════════════════════════════════════════════════════ ERROR TOAST ══ -->
-  <div id="error-toast" class="error-toast hidden">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <!-- ══════════════════════════════════════════════ ERROR TOAST ══ -->
+  <div id="error-toast" class="error-toast hidden" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
       <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
       <line x1="12" y1="16" x2="12.01" y2="16"/>
     </svg>
@@ -211,5 +269,6 @@
   </div>
 
   <script src="app.js"></script>
+  <script src="animations.js"></script>
 </body>
 </html>
