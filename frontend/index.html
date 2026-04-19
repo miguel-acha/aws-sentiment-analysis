@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spotify Sentiment Analyzer — ¿Cuál es tu vibe?</title>
+  <meta name="description" content="Analizá el sentimiento de cualquier playlist de Spotify con inteligencia artificial. Descubrí si tu música es positiva, neutra o melancólica." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Circular+Std:wght@400;700&family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════ HERO / INPUT ══ -->
+  <section id="hero" class="hero">
+    <div class="hero-bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="hero-content">
+      <div class="logo-wrap">
+        <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+        </svg>
+        <div class="logo-text">
+          <span class="logo-title">Vibe<span class="logo-accent">Check</span></span>
+          <span class="logo-sub">Spotify Sentiment Analyzer</span>
+        </div>
+      </div>
+
+      <h1 class="hero-headline">
+        ¿Cuál es la<br />
+        <span class="gradient-text">vibra de tu playlist?</span>
+      </h1>
+      <p class="hero-sub">
+        Analizamos cada canción con <strong>Amazon Comprehend</strong> y te contamos si tu música<br />
+        tiende a ser positiva 🌟, neutral 😐 o melancólica 😢
+      </p>
+
+      <form id="analyze-form" class="input-card" autocomplete="off">
+        <div class="input-group">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 18V5l12-2v13"/>
+            <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+          </svg>
+          <input
+            id="playlist-url"
+            type="text"
+            placeholder="Pegá la URL de tu playlist de Spotify…"
+            spellcheck="false"
+            required
+          />
+        </div>
+        <div class="form-options">
+          <label class="option-label">
+            <span>Máximo de canciones:</span>
+            <select id="max-tracks">
+              <option value="20">20 canciones (rápido)</option>
+              <option value="50" selected>50 canciones</option>
+              <option value="100">100 canciones</option>
+            </select>
+          </label>
+        </div>
+        <button id="analyze-btn" type="submit" class="btn-analyze">
+          <span class="btn-text">Analizar Playlist</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </button>
+      </form>
+
+      <p class="hero-hint">
+        Ejemplo:
+        <button class="hint-url" id="demo-btn" type="button">
+          open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M
+        </button>
+      </p>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════ LOADING STATE ══ -->
+  <section id="loading" class="loading-section hidden">
+    <div class="loading-content">
+      <div class="audio-bars">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span>
+      </div>
+      <h2 class="loading-title">Analizando tu playlist…</h2>
+      <div class="loading-steps">
+        <div class="load-step" id="step-spotify">
+          <div class="step-dot"></div>
+          <span>Obteniendo canciones de Spotify</span>
+        </div>
+        <div class="load-step" id="step-comprehend">
+          <div class="step-dot"></div>
+          <span>Analizando sentimientos con Amazon Comprehend</span>
+        </div>
+        <div class="load-step" id="step-chart">
+          <div class="step-dot"></div>
+          <span>Generando tu reporte visual</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════ RESULTS ══ -->
+  <section id="results" class="results-section hidden">
+
+    <!-- Playlist Header -->
+    <div class="results-header">
+      <div class="playlist-meta">
+        <img id="playlist-img" src="" alt="Playlist cover" class="playlist-cover" />
+        <div class="playlist-info">
+          <span class="playlist-label">PLAYLIST</span>
+          <h2 id="playlist-name" class="playlist-name">—</h2>
+          <div class="playlist-details">
+            <span id="playlist-owner"></span>
+            <span class="dot-sep">·</span>
+            <span id="track-count"></span>
+          </div>
+        </div>
+      </div>
+      <div id="dominant-badge" class="dominant-badge">
+        <span id="dominant-emoji">🌟</span>
+        <div>
+          <div class="dominant-label">VIBE DOMINANTE</div>
+          <div id="dominant-text" class="dominant-text">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Charts Row ── -->
+    <div class="charts-grid">
+
+      <!-- Gauge -->
+      <div class="chart-card" id="gauge-card">
+        <h3 class="chart-title">Vibe Meter</h3>
+        <div class="gauge-wrap">
+          <canvas id="gaugeChart"></canvas>
+          <div class="gauge-center">
+            <div id="gauge-score" class="gauge-score">0.00</div>
+            <div id="gauge-label" class="gauge-label-text">—</div>
+          </div>
+        </div>
+        <div class="gauge-axis">
+          <span class="axis-neg">😢 Depresiva</span>
+          <span class="axis-pos">Positiva 🌟</span>
+        </div>
+      </div>
+
+      <!-- Donut -->
+      <div class="chart-card" id="donut-card">
+        <h3 class="chart-title">Distribución de Sentimientos</h3>
+        <div class="donut-wrap">
+          <canvas id="donutChart"></canvas>
+        </div>
+        <div class="donut-legend" id="donut-legend"></div>
+      </div>
+
+    </div>
+
+    <!-- ── Stats Row ── -->
+    <div class="stats-row" id="stats-row"></div>
+
+    <!-- ── Song Cards ── -->
+    <div class="songs-section">
+      <div class="songs-header">
+        <h3 class="section-title">Canciones Analizadas</h3>
+        <div class="filter-tabs" id="filter-tabs">
+          <button class="filter-tab active" data-filter="ALL">Todas</button>
+          <button class="filter-tab" data-filter="POSITIVE">😊 Positivas</button>
+          <button class="filter-tab" data-filter="NEUTRAL">😐 Neutras</button>
+          <button class="filter-tab" data-filter="NEGATIVE">😢 Negativas</button>
+        </div>
+      </div>
+      <div class="songs-grid" id="songs-grid"></div>
+    </div>
+
+    <!-- ── Actions ── -->
+    <div class="actions-row">
+      <a id="download-btn" href="#" class="btn-secondary" download="vibe-report.png">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Descargar Reporte PNG
+      </a>
+      <button class="btn-primary" id="new-analysis-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="1 4 1 10 7 10"/>
+          <path d="M3.51 15a9 9 0 1 0 .49-3.96"/>
+        </svg>
+        Nueva Búsqueda
+      </button>
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════ ERROR TOAST ══ -->
+  <div id="error-toast" class="error-toast hidden">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <span id="error-msg">Error</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

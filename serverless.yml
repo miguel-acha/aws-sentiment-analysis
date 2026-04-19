@@ -1,0 +1,58 @@
+service: spotifysentiment
+
+frameworkVersion: '3'
+
+useDotenv: true
+
+provider:
+  name: aws
+  httpApi:
+    cors: true
+  runtime: python3.12
+  region: us-east-1
+  memorySize: 512
+  timeout: 29
+  environment:
+    SPOTIFY_CLIENT_ID: ${env:SPOTIFY_CLIENT_ID}
+    SPOTIFY_CLIENT_SECRET: ${env:SPOTIFY_CLIENT_SECRET}
+    S3_BUCKET_NAME: ${env:S3_BUCKET_NAME}
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "comprehend:DetectSentiment"
+            - "comprehend:DetectDominantLanguage"
+          Resource: "*"
+        - Effect: "Allow"
+          Action:
+            - "s3:PutObject"
+            - "s3:PutObjectAcl"
+          Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
+
+functions:
+  api:
+    handler: src/lambda_handler.handler
+    layers:
+      - { Ref: PythonDepsLambdaLayer }
+    events:
+      - httpApi:
+          path: /analyze
+          method: post
+
+layers:
+  pythonDeps:
+    path: layer
+    description: "Layer containing matplotlib, pillow, numpy, spotipy, boto3"
+    compatibleRuntimes:
+      - python3.12
+
+package:
+  patterns:
+    - "!node_modules/**"
+    - "!layer/**"
+    - "!.serverless/**"
+    - "!.git/**"
+    - "!.env"
+    - "!.env.example"
+
