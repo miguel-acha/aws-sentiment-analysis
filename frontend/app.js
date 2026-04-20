@@ -205,20 +205,23 @@ async function handleSpotifyCallback() {
   const verifier = sessionStorage.getItem('spotify_code_verifier');
   if (!verifier) return;
 
+  // Mostrar estado de autenticación sin ocultar el hero
+  const loginBtn = spotifyLoginBtn;
+  if (loginBtn) { loginBtn.disabled = true; loginBtn.querySelector('.btn-text').textContent = 'Autenticando...'; }
+
   try {
-    setLoading(true);
     const body = new URLSearchParams({
-      client_id: SPOTIFY_CLIENT_ID,
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: SPOTIFY_REDIRECT_URI,
+      client_id:     SPOTIFY_CLIENT_ID,
+      grant_type:    'authorization_code',
+      code:          code,
+      redirect_uri:  SPOTIFY_REDIRECT_URI,
       code_verifier: verifier,
     });
 
     const res = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body
+      body:    body
     });
 
     if (!res.ok) throw new Error('Error al intercambiar el código OAuth');
@@ -226,18 +229,22 @@ async function handleSpotifyCallback() {
     const data = await res.json();
     spotifyAccessToken = data.access_token;
     sessionStorage.setItem('spotify_access_token', spotifyAccessToken);
-    
-    // Clear URL params
+
+    // Limpiar ?code= de la URL para que no se reprocese al recargar
     window.history.replaceState({}, document.title, window.location.pathname);
+    sessionStorage.removeItem('spotify_code_verifier');
   } catch (err) {
     console.error('Auth error:', err);
-    showError('Error al autenticar con Spotify.');
-  } finally {
-    setLoading(false);
+    showError('Error al autenticar con Spotify. Intentá de nuevo.');
+    if (loginBtn) { loginBtn.disabled = false; loginBtn.querySelector('.btn-text').textContent = 'Conectar con Spotify'; }
   }
 }
 
 function updateAuthUI() {
+  // Siempre asegurar que el hero sea visible (puede haberse ocultado por setLoading)
+  heroSection.classList.remove('hidden');
+  loadingSection.classList.add('hidden');
+
   updateUserBar();
   if (spotifyAccessToken || USE_MOCK) {
     authSection.classList.add('hidden');
