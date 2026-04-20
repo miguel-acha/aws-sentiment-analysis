@@ -13,6 +13,8 @@ const API_URL = 'https://lunzatfoxb.execute-api.us-east-1.amazonaws.com/analyze'
 const SPOTIFY_CLIENT_ID = '3f9d449a2ca24dcab6456ecad92e055c';
 const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
 let spotifyAccessToken = sessionStorage.getItem('spotify_access_token');
+let spotifyUserProfile  = null;
+let spotifyUserPlaylists = [];
 
 // Para pruebas locales sin API, usar datos mock
 const USE_MOCK = false;
@@ -61,22 +63,31 @@ const MOCK_DATA = {
 // ─── Elementos del DOM ────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
-const heroSection     = $('hero');
-const authSection     = $('auth-section');
-const analyzeSection  = $('analyze-section');
-const spotifyLoginBtn = $('spotify-login-btn');
-const loadingSection  = $('loading');
-const resultsSection  = $('results');
-const form            = $('analyze-form');
-const urlInput        = $('playlist-url');
-const maxTracksSelect = $('max-tracks');
-const analyzeBtn      = $('analyze-btn');
-const demoBtn         = $('demo-btn');
-const errorToast      = $('error-toast');
-const errorMsg        = $('error-msg');
-const newAnalysisBtn  = $('new-analysis-btn');
-const downloadBtn     = $('download-btn');
-const filterTabs      = document.querySelectorAll('.filter-tab');
+const heroSection          = $('hero');
+const authSection          = $('auth-section');
+const analyzeSection       = $('analyze-section');
+const spotifyLoginBtn      = $('spotify-login-btn');
+const loadingSection       = $('loading');
+const resultsSection       = $('results');
+const form                 = $('analyze-form');
+const urlInput             = $('playlist-url');
+const maxTracksSelect      = $('max-tracks');
+const analyzeBtn           = $('analyze-btn');
+const demoBtn              = $('demo-btn');
+const errorToast           = $('error-toast');
+const errorMsg             = $('error-msg');
+const newAnalysisBtn       = $('new-analysis-btn');
+const downloadBtn          = $('download-btn');
+const filterTabs           = document.querySelectorAll('.filter-tab');
+// User bar
+const userBar              = $('user-bar');
+const userAvatarImg        = $('user-avatar');
+const userAvatarInitials   = $('user-avatar-initials');
+const userDisplayName      = $('user-display-name');
+const logoutBtn            = $('logout-btn');
+// Playlists
+const playlistsGrid        = $('playlists-grid');
+const refreshPlaylistsBtn  = $('refresh-playlists-btn');
 
 // ─── Rebind cursor hover on dynamic elements ───────────────────────────────
 function rebindCursorHover() {
@@ -96,11 +107,12 @@ let donutChartInstance = null;
 let currentTracks = [];
 
 // ─── Demo / URL de prueba ─────────────────────────────────────────────────────
-demoBtn.addEventListener('click', () => {
-  urlInput.value = 'https://open.spotify.com/playlist/1BmqpSfccNZMPtkMpIl2FZ';
-  urlInput.focus();
-  urlInput.select();
-});
+if (demoBtn) {
+  demoBtn.addEventListener('click', () => {
+    if (urlInput) urlInput.value = 'https://open.spotify.com/playlist/1BmqpSfccNZMPtkMpIl2FZ';
+    if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+  });
+}
 
 // ─── Nueva búsqueda ───────────────────────────────────────────────────────────
 newAnalysisBtn.addEventListener('click', () => {
@@ -173,11 +185,12 @@ async function handleSpotifyLogin() {
   sessionStorage.setItem('spotify_code_verifier', verifier);
 
   const params = new URLSearchParams({
-    client_id: SPOTIFY_CLIENT_ID,
-    response_type: 'code',
-    redirect_uri: SPOTIFY_REDIRECT_URI,
+    client_id:             SPOTIFY_CLIENT_ID,
+    response_type:         'code',
+    redirect_uri:          SPOTIFY_REDIRECT_URI,
     code_challenge_method: 'S256',
-    code_challenge: challenge,
+    code_challenge:        challenge,
+    scope:                 'playlist-read-private playlist-read-collaborative user-read-private user-read-email',
   });
 
   window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
@@ -224,21 +237,156 @@ async function handleSpotifyCallback() {
 }
 
 function updateAuthUI() {
+  updateUserBar();
   if (spotifyAccessToken || USE_MOCK) {
     authSection.classList.add('hidden');
     analyzeSection.classList.remove('hidden');
+    renderPlaylists();
   } else {
     authSection.classList.remove('hidden');
     analyzeSection.classList.add('hidden');
   }
 }
 
+function updateUserBar() {
+  if (!userBar) return;
+  if (spotifyAccessToken && spotifyUserProfile) {
+    userBar.classList.add('active');
+    document.body.classList.add('has-user-bar');
+    // Display name
+    const name = spotifyUserProfile.display_name || spotifyUserProfile.id || 'Usuario';
+    if (userDisplayName) userDisplayName.textContent = name;
+    // Avatar
+    const avatarUrl = spotifyUserProfile.images && spotifyUserProfile.images.length > 0
+      ? spotifyUserProfile.images[spotifyUserProfile.images.length > 1 ? 1 : 0].url
+      : null;
+    if (avatarUrl) {
+      if (userAvatarImg) { userAvatarImg.src = avatarUrl; userAvatarImg.style.display = 'block'; }
+      if (userAvatarInitials) userAvatarInitials.style.display = 'none';
+    } else {
+      if (userAvatarImg) userAvatarImg.style.display = 'none';
+      if (userAvatarInitials) {
+        userAvatarInitials.textContent = name.charAt(0).toUpperCase();
+        userAvatarInitials.style.display = 'flex';
+      }
+    }
+  } else {
+    userBar.classList.remove('active');
+    document.body.classList.remove('has-user-bar');
+  }
+}
+
+async function fetchSpotifyUserData() {
+  if (!spotifyAccessToken) return;
+  try {
+    // Fetch user profile
+    const profileRes = await fetch('https://api.spotify.com/v1/me', {
+      headers: { 'Authorization': `Bearer ${spotifyAccessToken}` }
+    });
+    if (!profileRes.ok) {
+      // Token expired or invalid — clear it
+      console.warn('[VibeCheck] Token inválido o expirado. Cerrando sesión.');
+      spotifyAccessToken = null;
+      sessionStorage.removeItem('spotify_access_token');
+      return;
+    }
+    spotifyUserProfile = await profileRes.json();
+
+    // Fetch user playlists
+    const plRes = await fetch('https://api.spotify.com/v1/me/playlists?limit=50', {
+      headers: { 'Authorization': `Bearer ${spotifyAccessToken}` }
+    });
+    if (plRes.ok) {
+      const plData = await plRes.json();
+      spotifyUserPlaylists = plData.items || [];
+    }
+  } catch (err) {
+    console.error('[VibeCheck] Error obteniendo datos de Spotify:', err);
+  }
+}
+
+function renderPlaylists() {
+  if (!playlistsGrid) return;
+  const playlists = spotifyUserPlaylists;
+
+  if (!playlists || playlists.length === 0) {
+    playlistsGrid.innerHTML = '<p class="playlists-empty">No se encontraron playlists en tu cuenta.</p>';
+    return;
+  }
+
+  playlistsGrid.innerHTML = playlists.map(pl => {
+    const imgUrl  = pl.images && pl.images.length > 0 ? pl.images[0].url : '';
+    const name    = pl.name || 'Sin nombre';
+    const tracks  = pl.tracks ? pl.tracks.total : '—';
+    const url     = pl.external_urls ? pl.external_urls.spotify : '';
+    return `
+      <div class="playlist-card" data-url="${url}" role="button" tabindex="0" aria-label="Analizar ${escHtml(name)}">
+        <div class="playlist-card-img-wrap">
+          ${ imgUrl
+            ? `<img src="${imgUrl}" alt="${escHtml(name)}" class="playlist-card-img" loading="lazy" />`
+            : `<div class="playlist-card-no-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>`
+          }
+          <div class="playlist-card-overlay">
+            <svg class="play-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+          </div>
+        </div>
+        <div class="playlist-card-name" title="${escHtml(name)}">${escHtml(name)}</div>
+        <div class="playlist-card-tracks">${tracks} canciones</div>
+      </div>
+    `;
+  }).join('');
+
+  playlistsGrid.querySelectorAll('.playlist-card').forEach(card => {
+    const handler = () => {
+      const url = card.dataset.url;
+      if (!url) return;
+      // Highlight selected
+      playlistsGrid.querySelectorAll('.playlist-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      if (urlInput) urlInput.value = url;
+      if (form) form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+    };
+    card.addEventListener('click', handler);
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handler(); } });
+  });
+}
+
 if (spotifyLoginBtn) {
   spotifyLoginBtn.addEventListener('click', handleSpotifyLogin);
 }
 
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    spotifyAccessToken   = null;
+    spotifyUserProfile   = null;
+    spotifyUserPlaylists = [];
+    sessionStorage.removeItem('spotify_access_token');
+    sessionStorage.removeItem('spotify_code_verifier');
+    updateAuthUI();
+    // Go back to hero if in results
+    if (!resultsSection.classList.contains('hidden')) {
+      resultsSection.classList.add('hidden');
+      heroSection.classList.remove('hidden');
+    }
+  });
+}
+
+if (refreshPlaylistsBtn) {
+  refreshPlaylistsBtn.addEventListener('click', async () => {
+    if (!spotifyAccessToken) return;
+    refreshPlaylistsBtn.style.animation = 'spin360 .6s linear';
+    if (playlistsGrid) playlistsGrid.innerHTML = '<div class="playlists-loading">Actualizando...</div>';
+    await fetchSpotifyUserData();
+    renderPlaylists();
+    setTimeout(() => { refreshPlaylistsBtn.style.animation = ''; }, 700);
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  handleSpotifyCallback().then(() => {
+  handleSpotifyCallback().then(async () => {
+    if (spotifyAccessToken) {
+      await fetchSpotifyUserData();
+    }
     updateAuthUI();
   });
 });
