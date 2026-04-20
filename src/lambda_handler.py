@@ -130,20 +130,23 @@ def handler(event: dict, context) -> dict:
         summary = aggregate(analyzed)
         print(f"[lambda_handler] Resumen: {summary['dominant']} ({summary['weighted_score']:+.2f}) — {summary['vibe_label']}")
 
-        # 4. Generar PNG del reporte
-        print("[lambda_handler] Paso 4: Generando PNG...")
-        png_bytes = generate_report_png(analyzed, summary, playlist_info)
+        # 4. Generar PNG y subir a S3 (opcional — si falla, continuamos sin PNG)
+        png_url = None
+        try:
+            print("[lambda_handler] Paso 4: Generando PNG...")
+            png_bytes = generate_report_png(analyzed, summary, playlist_info)
 
-        # 5. Subir a S3
-        print("[lambda_handler] Paso 5: Subiendo a S3...")
-        bucket = os.environ.get("S3_BUCKET_NAME", "spotify-sentiment-reports")
-        ensure_bucket_exists(bucket)
-
-        playlist_id = playlist_url.split("/")[-1].split("?")[0]
-        upload_result = upload_report(png_bytes, playlist_id)
+            print("[lambda_handler] Paso 5: Subiendo a S3...")
+            bucket = os.environ.get("S3_BUCKET_NAME", "spotify-sentiment-reports")
+            ensure_bucket_exists(bucket)
+            playlist_id = playlist_url.split("/")[-1].split("?")[0]
+            upload_result = upload_report(png_bytes, playlist_id)
+            png_url = upload_result.get("url")
+            print(f"[lambda_handler] PNG subido: {png_url}")
+        except Exception as png_err:
+            print(f"[lambda_handler] Advertencia: PNG/S3 falló (no crítico): {png_err}")
 
         # 6. Preparar respuesta
-        # Serializar tracks sin datos innecesarios para el frontend
         tracks_payload = [
             {
                 "track_id":  t["track_id"],
@@ -167,7 +170,7 @@ def handler(event: dict, context) -> dict:
                 "vibe_label":     summary["vibe_label"],
             },
             "tracks":  tracks_payload,
-            "png_url": upload_result["url"],
+            "png_url": png_url,  # None si S3 falló
         }
 
         print("[lambda_handler] ✅ Pipeline completo exitosamente.")

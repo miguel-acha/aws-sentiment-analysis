@@ -112,22 +112,19 @@ def _spotify_get(url: str, token: str, params: dict = None) -> dict:
 def get_playlist_info(token: str, playlist_id: str) -> dict:
     """Retorna metadata basica de la playlist (nombre, imagen, owner)."""
     url = f"{SPOTIFY_API_BASE}/playlists/{playlist_id}"
-    # Nota Feb 2026: el campo 'tracks' fue renombrado a 'items'
-    # Para metadata usamos fields para limitar la respuesta
-    params = {"fields": "name,description,owner,images,items(total)"}
-
-    data = _spotify_get(url, token, params)
+    # Sin 'fields' para mayor compatibilidad — la API puede rechazar campos inválidos
+    data = _spotify_get(url, token)
 
     images = data.get("images") or []
-    # Feb 2026: 'tracks' renombrado a 'items'
-    items_obj = data.get("items") or data.get("tracks") or {}
+    # El campo puede ser 'tracks' o 'items' según la versión de la API
+    tracks_obj = data.get("tracks") or data.get("items") or {}
 
     return {
-        "name": data.get("name", "Playlist"),
-        "description": data.get("description", ""),
-        "owner": (data.get("owner") or {}).get("display_name", "Unknown"),
-        "image_url": images[0]["url"] if images else None,
-        "total_tracks": items_obj.get("total", 0),
+        "name":         data.get("name", "Playlist"),
+        "description":  data.get("description", ""),
+        "owner":        (data.get("owner") or {}).get("display_name", "Unknown"),
+        "image_url":    images[0]["url"] if images else None,
+        "total_tracks": tracks_obj.get("total", 0),
     }
 
 

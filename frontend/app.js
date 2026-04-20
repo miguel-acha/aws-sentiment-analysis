@@ -420,7 +420,8 @@ async function callApi(playlistUrl, maxTracks) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    // Mostrar el detalle específico si está disponible
+    throw new Error(err.detail || err.error || `HTTP ${res.status}`);
   }
 
   const data = await res.json();
