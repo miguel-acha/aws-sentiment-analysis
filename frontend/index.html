@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>VibeCheck — Spotify Sentiment Analyzer</title>
-  <meta name="description" content="Analiza el sentimiento de cualquier playlist de Spotify con inteligencia artificial de Amazon Comprehend." />
+  <meta name="description"
+    content="Analiza el sentimiento de cualquier playlist de Spotify con inteligencia artificial de Amazon Comprehend." />
 
-  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,300;1,14..32,400&display=swap" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;0,14..32,900;1,14..32,300;1,14..32,400&display=swap"
+    rel="stylesheet" />
 
-  <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
 
   <!-- Custom cursor -->
@@ -43,8 +47,11 @@
         </div>
       </div>
       <button id="logout-btn" class="logout-btn" aria-label="Desconectar Spotify">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:14px;height:14px;">
-          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+          style="width:14px;height:14px;">
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+          <polyline points="16 17 21 12 16 7" />
+          <line x1="21" y1="12" x2="9" y2="12" />
         </svg>
         Desconectar
       </button>
@@ -65,7 +72,8 @@
 
       <div class="logo-wrap reveal-fade">
         <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor" aria-label="Spotify">
-          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          <path
+            d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
         </svg>
         <div class="logo-text">
           <span class="logo-title">Vibe<span class="logo-accent">Check</span></span>
@@ -81,32 +89,35 @@
       </h1>
 
       <p class="hero-sub reveal-fade delay-2">
-        Cada playlist cuenta una historia. Usamos <strong>Amazon Comprehend</strong> para leer entre líneas y revelar si tu música es radiante, introspectiva o melancólica.
+        Cada playlist cuenta una historia. Usamos <strong>Amazon Comprehend</strong> para leer entre líneas y revelar si
+        tu música es radiante, introspectiva o melancólica.
       </p>
 
       <!-- Auth Section -->
       <div id="auth-section" class="auth-section">
         <button id="spotify-login-btn" class="btn-analyze btn-connect" type="button" aria-label="Conectar con Spotify">
-          <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:22px;height:22px;margin-right:10px;">
-            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"
+            style="width:22px;height:22px;margin-right:10px;">
+            <path
+              d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
           </svg>
           <span class="btn-text">Conectar con Spotify</span>
         </button>
-        <p class="auth-hint-text">
-          Inicia sesión para analizar tus playlists privadas.
-        </p>
+        <p class="auth-hint-text">Inicia sesión para analizar tus playlists privadas.</p>
       </div>
 
       <!-- Analysis Section -->
       <div id="analyze-section" class="hidden">
 
-        <!-- Playlist Picker -->
         <div class="playlists-picker" id="playlists-picker">
           <div class="picker-header">
             <span class="picker-title">Tus Playlists</span>
-            <button id="refresh-playlists-btn" class="refresh-btn" type="button" title="Actualizar playlists" aria-label="Actualizar playlists">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:13px;height:13px;">
-                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.96"/>
+            <button id="refresh-playlists-btn" class="refresh-btn" type="button" title="Actualizar"
+              aria-label="Actualizar playlists">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"
+                style="width:13px;height:13px;">
+                <polyline points="1 4 1 10 7 10" />
+                <path d="M3.51 15a9 9 0 1 0 .49-3.96" />
               </svg>
             </button>
           </div>
@@ -115,23 +126,18 @@
           </div>
         </div>
 
-        <!-- Divider -->
         <div class="picker-or-divider"><span>o pega una URL</span></div>
 
-        <!-- Manual URL Form -->
         <form id="analyze-form" class="input-card" autocomplete="off">
           <div class="input-group" id="input-group-main">
-            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-              <path d="M9 18V5l12-2v13"/>
-              <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
             </svg>
-            <input
-              id="playlist-url"
-              type="text"
-              placeholder="https://open.spotify.com/playlist/..."
-              spellcheck="false"
-              aria-label="URL de la playlist de Spotify"
-            />
+            <input id="playlist-url" type="text" placeholder="https://open.spotify.com/playlist/..." spellcheck="false"
+              aria-label="URL de la playlist de Spotify" />
             <div class="input-glow" aria-hidden="true"></div>
           </div>
           <div class="form-bottom">
@@ -145,16 +151,16 @@
             </label>
             <button id="analyze-btn" type="submit" class="btn-analyze" aria-label="Analizar playlist">
               <span class="btn-text">Analizar</span>
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7" />
               </svg>
               <div class="btn-shine" aria-hidden="true"></div>
             </button>
           </div>
         </form>
 
-        <!-- Demo hint -->
-        <p class="hero-hint" style="margin-top: .75rem;">
+        <p class="hero-hint" style="margin-top:.75rem;">
           <span>Probar con</span>
           <button class="hint-url" id="demo-btn" type="button" aria-label="Usar playlist de ejemplo">
             Playlist de ejemplo
@@ -162,7 +168,6 @@
         </p>
 
       </div>
-
     </div>
   </section>
 
@@ -215,38 +220,48 @@
   <!-- ══════════════════════════════════════════════ RESULTS ══ -->
   <section id="results" class="results-section hidden">
 
-    <!-- Playlist Header -->
-    <div class="results-header">
-      <div class="playlist-meta">
-        <div class="playlist-cover-wrap">
-          <img id="playlist-img" src="" alt="Portada de la playlist" class="playlist-cover" />
-          <div class="playlist-cover-glow" aria-hidden="true"></div>
+    <!-- ── Cinematic Intro Banner ── -->
+    <div class="results-intro" id="results-intro">
+      <!-- Blurred album art background (set via JS) -->
+      <div class="results-intro-bg" id="results-intro-bg"></div>
+      <div class="results-intro-vignette"></div>
+
+      <div class="results-intro-inner">
+        <!-- Cover art -->
+        <div class="cover-xl-wrap">
+          <img id="playlist-img" class="cover-xl" src="" alt="Portada de la playlist" />
         </div>
-        <div class="playlist-info">
-          <span class="playlist-label">Playlist analizada</span>
-          <h2 id="playlist-name" class="playlist-name">—</h2>
-          <div class="playlist-details">
+
+        <!-- Playlist info + vibe pill -->
+        <div class="results-intro-text">
+          <div class="results-eyebrow">Playlist analizada</div>
+          <h2 id="playlist-name" class="results-playlist-name">—</h2>
+          <p class="results-meta-row">
             <span id="playlist-owner"></span>
             <span class="dot-sep" aria-hidden="true">·</span>
             <span id="track-count"></span>
+          </p>
+          <!-- Vibe pill replaces the old dominant-badge -->
+          <div id="dominant-badge" class="vibe-pill-lg positive">
+            <svg id="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              aria-hidden="true" style="width:14px;height:14px;flex-shrink:0;">
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            <span id="dominant-text">—</span>
           </div>
         </div>
-      </div>
-      <div id="dominant-badge" class="dominant-badge">
-        <div class="badge-icon-wrap">
-          <svg id="badge-icon" class="badge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-          </svg>
-        </div>
-        <div>
-          <div class="dominant-label">Vibe dominante</div>
-          <div id="dominant-text" class="dominant-text">—</div>
+
+        <!-- Score block -->
+        <div class="results-intro-score-block">
+          <div id="gauge-score" class="score-display-number">+0.00</div>
+          <div id="gauge-label" class="score-display-label">Vibe Score</div>
         </div>
       </div>
     </div>
 
-    <!-- Charts -->
+    <!-- ── Charts ── -->
     <div class="charts-grid">
+      <!-- Gauge — arc only, score is shown in banner above -->
       <div class="chart-card" id="gauge-card">
         <div class="chart-card-header">
           <h3 class="chart-title">Medidor de Vibe</h3>
@@ -254,10 +269,7 @@
         </div>
         <div class="gauge-wrap">
           <canvas id="gaugeChart" aria-label="Medidor de sentimiento"></canvas>
-          <div class="gauge-center">
-            <div id="gauge-score" class="gauge-score">0.00</div>
-            <div id="gauge-label" class="gauge-label-text">—</div>
-          </div>
+          <!-- gauge-center intentionally omitted — score lives in the intro banner -->
         </div>
         <div class="gauge-axis" aria-hidden="true">
           <span class="axis-neg">Melancólica</span>
@@ -265,6 +277,7 @@
         </div>
       </div>
 
+      <!-- Donut -->
       <div class="chart-card" id="donut-card">
         <div class="chart-card-header">
           <h3 class="chart-title">Distribución</h3>
@@ -277,10 +290,10 @@
       </div>
     </div>
 
-    <!-- Stats -->
+    <!-- ── Stats ── -->
     <div class="stats-row" id="stats-row" role="list"></div>
 
-    <!-- Songs -->
+    <!-- ── Songs ── -->
     <div class="songs-section">
       <div class="songs-header">
         <div>
@@ -297,19 +310,20 @@
       <div class="songs-grid" id="songs-grid" role="list"></div>
     </div>
 
-    <!-- Actions -->
+    <!-- ── Actions ── -->
     <div class="actions-row">
       <a id="download-btn" href="#" class="btn-secondary" download="vibe-report.png" aria-label="Descargar reporte PNG">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
         </svg>
         Descargar Reporte
       </a>
       <button class="btn-primary" id="new-analysis-btn" aria-label="Nueva búsqueda">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-          <polyline points="1 4 1 10 7 10"/>
-          <path d="M3.51 15a9 9 0 1 0 .49-3.96"/>
+          <polyline points="1 4 1 10 7 10" />
+          <path d="M3.51 15a9 9 0 1 0 .49-3.96" />
         </svg>
         Nueva Búsqueda
       </button>
@@ -320,8 +334,9 @@
   <!-- ══════════════════════════════════════════════ ERROR TOAST ══ -->
   <div id="error-toast" class="error-toast hidden" role="alert">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
-      <line x1="12" y1="16" x2="12.01" y2="16"/>
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="8" x2="12" y2="12" />
+      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
     <span id="error-msg">Error</span>
   </div>
@@ -329,4 +344,5 @@
   <script src="app.js"></script>
   <script src="animations.js"></script>
 </body>
+
 </html>
