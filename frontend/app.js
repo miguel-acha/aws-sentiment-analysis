@@ -11,8 +11,8 @@ const API_URL = 'https://lunzatfoxb.execute-api.us-east-1.amazonaws.com/analyze'
 
 // ─── PKCE Config & Auth ───────────────────────────────────────────────────────
 const SPOTIFY_CLIENT_ID = '3f9d449a2ca24dcab6456ecad92e055c';
-// Siempre apunta a la raíz para coincidir exactamente con el Redirect URI de Spotify
-const SPOTIFY_REDIRECT_URI = window.location.origin + '/';
+// URI exacto registrado en el dashboard de Spotify — NO usar window.location (falla en file://)
+const SPOTIFY_REDIRECT_URI = 'https://main.d3l36ughrz7z5g.amplifyapp.com/';
 let spotifyAccessToken = sessionStorage.getItem('spotify_access_token');
 let spotifyUserProfile  = null;
 let spotifyUserPlaylists = [];
