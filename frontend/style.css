@@ -1348,11 +1348,27 @@ body.has-user-bar { padding-top: 52px; }
   background: var(--border);
 }
 
-/* ── Btn connect variant (larger, centered) ─────────────────────────────── */
-.btn-connect {
-  padding: .9rem 2.4rem;
-  font-size: 1rem;
-  border-radius: var(--radius-pill);
-  letter-spacing: -.2px;
+/* ── Btn connect variant (larger, centered) ───────────────────────────── */
+.auth-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2.5rem;
 }
-
+.btn-connect {
+  display: inline-flex !important;  /* override block display — necesario para centrar */
+  padding: .95rem 2.6rem;
+  font-size: 1rem;
+  font-weight: 800;
+  border-radius: var(--radius-pill);
+  letter-spacing: -.1px;
+  color: #050508 !important;        /* texto siempre visible, no depende del hover */
+  width: auto;
+}
+.auth-hint-text {
+  color: rgba(248,248,248,.45);
+  font-size: .85rem;
+  text-align: center;
+  margin: 0;
+}

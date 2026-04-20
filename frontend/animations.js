@@ -93,11 +93,11 @@ function initParticles() {
     reset() {
       this.x  = Math.random() * width;
       this.y  = Math.random() * height;
-      this.vx = (Math.random() - .5) * .35;
-      this.vy = (Math.random() - .5) * .35;
-      this.alpha   = Math.random() * .4 + .05;
-      this.radius  = Math.random() * 1.8 + .5;
-      this.green   = Math.random() > .75;
+      this.vx = (Math.random() - .5) * .3;
+      this.vy = (Math.random() - .5) * .3;
+      this.alpha   = Math.random() * .3 + .04;
+      this.radius  = Math.random() * 1.2 + .3;  // máx 1.5px — evita el círculo grande
+      this.green   = Math.random() > .8;
       this.twinkle = Math.random() * Math.PI * 2;
     }
 
@@ -178,17 +178,7 @@ function initHeroAnimations() {
   .to('.hero-sub.reveal-fade', {
     opacity: 1,
     duration: .8,
-  }, '-=.5')
-  .to('.input-card.reveal-scale', {
-    opacity: 1,
-    scale: 1,
-    duration: .9,
-    ease: 'back.out(1.4)',
-  }, '-=.5')
-  .to('.hero-hint.reveal-fade', {
-    opacity: 1,
-    duration: .6,
-  }, '-=.4');
+  }, '-=.5');
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
