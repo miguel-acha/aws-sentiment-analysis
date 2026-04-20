@@ -512,23 +512,22 @@ function renderResults(data) {
   };
   downloadBtn.addEventListener('click', downloadBtn._dlHandler);
 
-  // Charts
-  renderGauge(summary.weighted_score, summary.vibe_label);
-  renderDonut(summary.percentages, summary.counts);
-  renderStats(summary);
-  renderSongCards(tracks, 'ALL');
-
-  // Show results, hide loading
+  // 1. Mostrar la sección PRIMERO para que Chart.js pueda tomar ancho y alto
   setLoading(false);
   loadingSection.classList.add('hidden');
   heroSection.classList.add('hidden');
   resultsSection.classList.remove('hidden');
 
-  // Reset filter tabs
+  // 2. Renderizar gráficos ahora que el div tiene tamaño en la pantalla
+  renderGauge(summary.weighted_score, summary.vibe_label);
+  renderDonut(summary.percentages, summary.counts);
+  renderStats(summary);
+  renderSongCards(tracks, 'ALL', true);
+
+  // 3. Reset tabs y trigger animación de entrada
   filterTabs.forEach(t => t.classList.remove('active'));
   filterTabs[0].classList.add('active');
 
-  // Trigger GSAP entrance
   if (typeof window.animateResultsIn === 'function') {
     window.animateResultsIn();
   }
@@ -694,7 +693,7 @@ function renderStats(summary) {
 }
 
 // ─── Song Cards ───────────────────────────────────────────────────────────────
-function renderSongCards(tracks, filter = 'ALL') {
+function renderSongCards(tracks, filter = 'ALL', isInit = false) {
   const grid = $('songs-grid');
   const filtered = filter === 'ALL' ? tracks : tracks.filter(t => t.sentiment === filter);
 
@@ -720,7 +719,9 @@ function renderSongCards(tracks, filter = 'ALL') {
     </div>`;
   }).join('');
 
-  if (typeof window.animateSongCards === 'function') window.animateSongCards();
+  if (typeof window.animateSongCards === 'function' && !isInit) {
+    window.animateSongCards();
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

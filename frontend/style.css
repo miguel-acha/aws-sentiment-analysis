@@ -730,6 +730,7 @@ img { display: block; }
   display: flex;
   justify-content: center;
   height: 200px;
+  width: 100%;
 }
 .gauge-wrap canvas { position: absolute; top: 0; left: 50%; transform: translateX(-50%); }
 .gauge-center {
@@ -766,6 +767,7 @@ img { display: block; }
 .donut-wrap {
   position: relative;
   height: 220px;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
