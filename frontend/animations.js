@@ -231,13 +231,18 @@ function initScrollReveal() {
 
   // Song card re-render animation
   window.animateSongCards = function () {
-    gsap.from('.song-card', {
-      opacity: 0,
-      y: 12,
-      stagger: { amount: .5, from: 'start' },
-      duration: .35,
-      ease: 'power2.out',
-    });
+    const cards = document.querySelectorAll('.song-card');
+    if (!cards.length) return;
+    gsap.killTweensOf(cards);
+    gsap.fromTo(cards,
+      { opacity: 0, y: 14 },
+      {
+        opacity: 1, y: 0,
+        stagger: { amount: .45, from: 'start' },
+        duration: .38,
+        ease: 'power2.out',
+      }
+    );
   };
 }
 

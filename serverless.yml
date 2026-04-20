@@ -28,7 +28,13 @@ provider:
           Action:
             - "s3:PutObject"
             - "s3:PutObjectAcl"
-          Resource: "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
+            - "s3:GetObject"
+            - "s3:CreateBucket"
+            - "s3:HeadBucket"
+            - "s3:ListBucket"
+          Resource:
+            - "arn:aws:s3:::${env:S3_BUCKET_NAME}"
+            - "arn:aws:s3:::${env:S3_BUCKET_NAME}/*"
 
 functions:
   api:

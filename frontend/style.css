@@ -11,10 +11,11 @@
   --green-bright:  #1ed760;
   --green-dim:     #0f6b31;
   --green-glow:    rgba(29,185,84,.3);
-  --green-muted:   rgba(29,185,84,.08);
+  --green-muted:   rgba(29,185,84,.1);
   --red:           #E8645A;
   --red-glow:      rgba(232,100,90,.25);
-  --neutral:       #6b6b6b;
+  --neutral:       #7B9CC0;
+  --mixed:         #F5A623;
   --bg:            #060608;
   --bg-1:          #0c0c0f;
   --bg-2:          #111115;
@@ -641,7 +642,8 @@ img { display: block; }
 .dominant-badge:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(29,185,84,.12); }
 .dominant-badge.negative { background: rgba(232,100,90,.07); border-color: rgba(232,100,90,.2); }
 .dominant-badge.negative:hover { box-shadow: 0 8px 30px rgba(232,100,90,.12); }
-.dominant-badge.neutral { background: rgba(107,107,107,.1); border-color: rgba(107,107,107,.2); }
+.dominant-badge.neutral { background: rgba(123,156,192,.07); border-color: rgba(123,156,192,.2); }
+.dominant-badge.mixed { background: rgba(245,166,35,.07); border-color: rgba(245,166,35,.2); }
 
 .badge-icon-wrap {
   width: 42px; height: 42px;
@@ -651,11 +653,13 @@ img { display: block; }
   flex-shrink: 0;
 }
 .dominant-badge.negative .badge-icon-wrap { background: rgba(232,100,90,.15); }
-.dominant-badge.neutral .badge-icon-wrap { background: rgba(107,107,107,.2); }
+.dominant-badge.neutral .badge-icon-wrap { background: rgba(123,156,192,.15); }
+.dominant-badge.mixed .badge-icon-wrap   { background: rgba(245,166,35,.15); }
 
 .badge-icon { width: 20px; height: 20px; color: var(--green); }
 .dominant-badge.negative .badge-icon { color: var(--red); }
 .dominant-badge.neutral .badge-icon { color: var(--neutral); }
+.dominant-badge.mixed .badge-icon   { color: var(--mixed); }
 
 .dominant-label {
   font-size: .62rem;
@@ -836,9 +840,6 @@ img { display: block; }
   line-height: 1;
   margin-bottom: 4px;
 }
-.stat-value.positive { color: var(--green); }
-.stat-value.neutral  { color: var(--neutral); }
-.stat-value.negative { color: var(--red); }
 .stat-label {
   font-size: .68rem;
   letter-spacing: 1.5px;
@@ -851,6 +852,19 @@ img { display: block; }
   font-size: .78rem;
   color: var(--white-50);
   margin-top: 4px;
+}
+.progress-bg {
+  width: 100%;
+  height: 4px;
+  background: rgba(255,255,255,.05);
+  border-radius: 4px;
+  margin-top: 14px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 4px;
 }
 
 /* Songs Section */
@@ -966,9 +980,9 @@ img { display: block; }
   text-transform: uppercase;
 }
 .chip-POSITIVE { background: rgba(29,185,84,.12); color: var(--green);   border: 1px solid rgba(29,185,84,.25); }
-.chip-NEUTRAL  { background: rgba(107,107,107,.15);color: #8a8a8a;       border: 1px solid rgba(107,107,107,.25); }
+.chip-NEUTRAL  { background: rgba(123,156,192,.15);color: var(--neutral); border: 1px solid rgba(123,156,192,.25); }
 .chip-NEGATIVE { background: rgba(232,100,90,.12); color: var(--red);    border: 1px solid rgba(232,100,90,.25); }
-.chip-MIXED    { background: rgba(255,190,0,.1);   color: #f5a623;       border: 1px solid rgba(255,190,0,.25); }
+.chip-MIXED    { background: rgba(245,166,35,.12); color: var(--mixed);  border: 1px solid rgba(245,166,35,.25); }
 
 /* Actions */
 .actions-row {

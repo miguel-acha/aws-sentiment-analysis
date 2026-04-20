@@ -467,29 +467,50 @@ function renderResults(data) {
   $('playlist-owner').textContent = playlist.owner || '';
   $('track-count').textContent = `${summary.total} canciones analizadas`;
 
-  // Dominant badge (no emojis)
+  // Dominant badge
   const badge = $('dominant-badge');
   const vibeLabel = summary.vibe_label
     ? summary.vibe_label.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim()
     : summary.dominant;
-  const domMap = {
-    POSITIVE: { icon: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>', text: vibeLabel, cls: '' },
-    NEUTRAL:  { icon: '<path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="10"/>', text: vibeLabel, cls: 'neutral' },
-    NEGATIVE: { icon: '<path d="M12 22a10 10 0 100-20 10 10 0 000 20z"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>', text: vibeLabel, cls: 'negative' },
-  };
-  const dom = domMap[summary.dominant] || domMap.NEUTRAL;
-  const badgeIconEl = $('badge-icon');
-  if (badgeIconEl) badgeIconEl.innerHTML = dom.icon;
-  $('dominant-text').textContent = dom.text;
-  badge.className = `dominant-badge ${dom.cls}`;
 
-  // Download button
-  if (png_url) {
-    downloadBtn.href = png_url;
-    downloadBtn.style.display = 'flex';
-  } else {
-    downloadBtn.style.display = 'none';
-  }
+  const badgeIcons = {
+    POSITIVE: '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+    NEUTRAL:  '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+    NEGATIVE: '<path d="M12 22a10 10 0 100-20 10 10 0 000 20z"/><path d="M16 16s-1.5-2-4-2-4 2-4 2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>',
+    MIXED:    '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  };
+  const dom = badgeIcons[summary.dominant] ? summary.dominant : 'NEUTRAL';
+  const badgeIconEl = $('badge-icon');
+  if (badgeIconEl) badgeIconEl.innerHTML = badgeIcons[dom];
+  $('dominant-text').textContent = vibeLabel;
+  badge.className = `dominant-badge ${dom.toLowerCase()}`;
+
+  // Download button — usa html2canvas (sin depender de S3)
+  downloadBtn.style.display = 'flex';
+  const oldHandler = downloadBtn._dlHandler;
+  if (oldHandler) downloadBtn.removeEventListener('click', oldHandler);
+  downloadBtn._dlHandler = async (e) => {
+    e.preventDefault();
+    if (typeof html2canvas !== 'undefined') {
+      try {
+        const origText = downloadBtn.innerHTML;
+        downloadBtn.innerHTML = 'Generando...';
+        const canvas = await html2canvas(resultsSection, {
+          backgroundColor: '#060608', scale: 2, useCORS: true, logging: false,
+        });
+        const link = document.createElement('a');
+        link.download = `vibe-${(playlist.name || 'reporte').replace(/\s+/g,'-').toLowerCase()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+        downloadBtn.innerHTML = origText;
+      } catch (err) { showError('No se pudo generar el reporte. Intentá de nuevo.'); }
+    } else if (png_url) {
+      window.open(png_url, '_blank');
+    } else {
+      showError('Descarga no disponible en este navegador.');
+    }
+  };
+  downloadBtn.addEventListener('click', downloadBtn._dlHandler);
 
   // Charts
   renderGauge(summary.weighted_score, summary.vibe_label);
@@ -517,74 +538,47 @@ function renderResults(data) {
 function renderGauge(score, label) {
   if (gaugeChartInstance) gaugeChartInstance.destroy();
 
-  // score: -1.0 a +1.0  →  convertir a porcentaje del gauge (0-100)
-  const pct = ((score + 1) / 2) * 100;  // 0% = muy negativo, 100% = muy positivo
-  const clampedPct = Math.max(0, Math.min(100, pct));
-
-  const negPct     = Math.max(0, 33 - clampedPct / 3);
-  const neuPct     = 34;
-  const posPct     = Math.min(100, clampedPct / 3 + 33) - 66;
-
-  // Color de la aguja según score
-  const needleColor = score > 0.2 ? '#1DB954'
-                    : score < -0.2 ? '#E8645A'
-                    : '#9a9a9a';
-
+  const needleColor = score > 0.15 ? '#1DB954' : score < -0.15 ? '#E8645A' : '#9BABCF';
   const ctx = document.getElementById('gaugeChart').getContext('2d');
 
-  // Datos del gauge: rojo | gris | verde (semicírculo superior)
+  // 4 segmentos: rojo | gris | verde | transparente (mitad inferior invisible)
+  // Total = 200: los 3 colores = 100, transparente = 100
+  // Con rotation:180 empieza en 9h (izq) → arriba → 3h (der) = semicírculo superior
   gaugeChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
       datasets: [{
-        data: [33.3, 33.4, 33.3],
-        backgroundColor: [
-          'rgba(232,100,90,0.85)',
-          'rgba(83,83,83,0.7)',
-          'rgba(29,185,84,0.85)',
-        ],
-        borderWidth: 0,
-        borderRadius: 4,
-        circumference: 180,
-        rotation: 270,
-      }, {
-        // Aguja: un punto pequeño en la posición correcta
-        data: [clampedPct, 100 - clampedPct],
-        backgroundColor: [needleColor, 'transparent'],
-        borderWidth: 0,
-        circumference: 180,
-        rotation: 270,
-        weight: 0.05,
+        data:            [33.33, 33.34, 33.33, 100],
+        backgroundColor: ['rgba(232,100,90,0.92)', 'rgba(80,95,125,0.75)', 'rgba(29,185,84,0.92)', 'rgba(0,0,0,0)'],
+        borderWidth:     0,
+        borderRadius:    5,
+        circumference:   360,
+        rotation:        180,
+        hoverOffset:     0,
       }]
     },
     options: {
-      responsive: true,
+      responsive:          true,
       maintainAspectRatio: false,
-      cutout: '65%',
+      cutout:              '62%',
+      events:              [],
       plugins: {
-        legend:    { display: false },
-        tooltip:   { enabled: false },
-        datalabels: {
-          display: false,
-        }
+        legend:     { display: false },
+        tooltip:    { enabled: false },
+        datalabels: { display: false },
       },
-      animation: {
-        animateRotate: true,
-        duration: 1000,
-        easing: 'easeOutQuart',
-      }
+      animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
     }
   });
 
-  // Actualizar texto central con animación
   const scoreEl = $('gauge-score');
   const labelEl = $('gauge-label');
-  scoreEl.style.color = needleColor;
+  if (scoreEl) scoreEl.style.color = needleColor;
   const cleanLabel = label ? label.replace(/[\u{1F300}-\u{1FFFF}\u{2600}-\u{27BF}]/gu, '').trim() : '—';
   if (labelEl) labelEl.textContent = cleanLabel;
   if (typeof window.animateGaugeScore === 'function') {
     window.animateGaugeScore(scoreEl, score);
-  } else {
+  } else if (scoreEl) {
     scoreEl.textContent = (score >= 0 ? '+' : '') + score.toFixed(2);
   }
 }
@@ -593,107 +587,128 @@ function renderGauge(score, label) {
 function renderDonut(percentages, counts) {
   if (donutChartInstance) donutChartInstance.destroy();
 
-  const sentiments = ['POSITIVE', 'NEUTRAL', 'NEGATIVE'];
-  const labels     = ['Positiva', 'Neutral', 'Negativa'];
-  const colors     = ['rgba(29,185,84,0.85)', 'rgba(107,107,107,0.75)', 'rgba(232,100,90,0.85)'];
-  const borders    = ['#1DB954', '#6b6b6b', '#E8645A'];
-  const data       = sentiments.map(s => percentages[s] || 0);
+  const ALL = [
+    { key: 'POSITIVE', label: 'Positiva',  color: 'rgba(29,185,84,0.92)',   border: '#1DB954' },
+    { key: 'NEUTRAL',  label: 'Neutral',   color: 'rgba(100,122,172,0.88)', border: '#7B9CC0' },
+    { key: 'NEGATIVE', label: 'Negativa',  color: 'rgba(232,100,90,0.92)',  border: '#E8645A' },
+    { key: 'MIXED',    label: 'Mixta',     color: 'rgba(245,166,35,0.88)',  border: '#F5A623' },
+  ];
+  const active = ALL.filter(s => (percentages[s.key] || 0) > 0);
 
   Chart.register(ChartDataLabels);
-
   const ctx = document.getElementById('donutChart').getContext('2d');
   donutChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels,
+      labels:   active.map(s => s.label),
       datasets: [{
-        data,
-        backgroundColor: colors,
-        borderColor: borders,
-        borderWidth: 2,
-        hoverOffset: 12,
+        data:            active.map(s => percentages[s.key] || 0),
+        backgroundColor: active.map(s => s.color),
+        borderColor:     active.map(s => s.border),
+        borderWidth:     2,
+        hoverOffset:     16,
       }]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '68%',
+      cutout: '66%',
       plugins: {
         legend: { display: false },
         tooltip: {
+          backgroundColor: 'rgba(8,8,14,0.96)',
+          borderColor:     'rgba(255,255,255,.1)',
+          borderWidth:     1,
+          titleColor:      '#fff',
+          bodyColor:       'rgba(255,255,255,.75)',
+          padding:         14,
+          cornerRadius:    10,
           callbacks: {
-            label: ctx => ` ${ctx.label}: ${ctx.parsed.toFixed(1)}% · ${counts[sentiments[ctx.dataIndex]] || 0} canciones`
-          },
-          backgroundColor: '#1A1A1A',
-          borderColor: 'rgba(255,255,255,.1)',
-          borderWidth: 1,
-          titleColor: '#fff',
-          bodyColor: 'rgba(255,255,255,.7)',
-          padding: 12,
+            label: (ctx) => {
+              const s = active[ctx.dataIndex];
+              const c = counts[s.key] || 0;
+              return ` ${s.label}: ${(percentages[s.key]||0).toFixed(1)}%  ·  ${c} canción${c!==1?'es':''}`;
+            }
+          }
         },
         datalabels: {
           color: '#fff',
-          font: { weight: 'bold', size: 12 },
-          formatter: (val) => val > 5 ? `${val.toFixed(0)}%` : '',
+          font:  { weight: '800', size: 11 },
+          formatter: (val) => val > 7 ? `${Math.round(val)}%` : '',
+          textShadowBlur:  5,
+          textShadowColor: 'rgba(0,0,0,.9)',
         }
       },
-      animation: { animateRotate: true, duration: 1000, easing: 'easeOutQuart' }
+      animation: { animateRotate: true, animateScale: true, duration: 1100, easing: 'easeOutQuart' }
     }
   });
 
-  // Leyenda custom
   const legend = $('donut-legend');
-  legend.innerHTML = sentiments.map((s, i) => `
-    <div class="legend-item">
-      <div class="legend-dot" style="background:${borders[i]}"></div>
-      <span>${labels[i]}: <strong>${(percentages[s] || 0).toFixed(1)}%</strong> (${counts[s] || 0})</span>
-    </div>
-  `).join('');
+  legend.innerHTML = active.map(s => {
+    const pct = (percentages[s.key]||0).toFixed(1);
+    const c   = counts[s.key] || 0;
+    return `<div class="legend-item">
+      <div class="legend-dot" style="background:${s.border};box-shadow:0 0 7px ${s.border}60;"></div>
+      <span>${s.label}: <strong>${pct}%</strong> <span class="legend-count">(${c})</span></span>
+    </div>`;
+  }).join('');
 }
 
 // ─── Stats Cards ───────────────────────────────────────────────────────────────
 function renderStats(summary) {
-  const { percentages, counts } = summary;
+  const { percentages, counts, total } = summary;
   const row = $('stats-row');
-  const items = [
-    { label: 'POSITIVAS', sentiment: 'POSITIVE', cls: 'positive' },
-    { label: 'NEUTRAS',   sentiment: 'NEUTRAL',  cls: 'neutral' },
-    { label: 'NEGATIVAS', sentiment: 'NEGATIVE', cls: 'negative' },
-  ];
-  row.innerHTML = items.map(({ label, sentiment, cls }) => `
-    <div class="stat-card ${cls}" role="listitem">
-      <div class="stat-value ${cls}" data-target="${(percentages[sentiment] || 0).toFixed(1)}">0.0%</div>
-      <div class="stat-label">${label}</div>
-      <div class="stat-count">${counts[sentiment] || 0} de ${summary.total} canciones</div>
-    </div>
-  `).join('');
 
-  // Animate counters
-  if (typeof window.animateCounter === 'function') {
+  const ITEMS = [
+    { label: 'POSITIVAS', key: 'POSITIVE', cls: 'positive', color: '#1DB954' },
+    { label: 'NEUTRAS',   key: 'NEUTRAL',  cls: 'neutral',  color: '#7B9CC0' },
+    { label: 'NEGATIVAS', key: 'NEGATIVE', cls: 'negative', color: '#E8645A' },
+    { label: 'MIXTAS',    key: 'MIXED',    cls: 'mixed',    color: '#F5A623' },
+  ].filter(item => (counts[item.key] || 0) > 0);
+
+  row.innerHTML = ITEMS.map(({ label, key, cls, color }) => {
+    const pct   = (percentages[key] || 0).toFixed(1);
+    const count = counts[key] || 0;
+    return `
+    <div class="stat-card ${cls}" role="listitem">
+      <div class="stat-value" style="color:${color}" data-target="${pct}">0%</div>
+      <div class="stat-label">${label}</div>
+      <div class="stat-count">${count} de ${total} canciones</div>
+      <div class="progress-bg"><div class="progress-fill" data-width="${pct}" style="background:${color};box-shadow:0 0 8px ${color}55;"></div></div>
+    </div>`;
+  }).join('');
+
+  requestAnimationFrame(() => {
     row.querySelectorAll('.stat-value[data-target]').forEach(el => {
-      const target = parseFloat(el.dataset.target);
-      window.animateCounter(el, target, '%');
+      const t = parseFloat(el.dataset.target);
+      if (typeof window.animateCounter === 'function') window.animateCounter(el, t, '%');
+      else el.textContent = t.toFixed(1) + '%';
     });
-  }
+    setTimeout(() => {
+      row.querySelectorAll('.progress-fill[data-width]').forEach(el => {
+        el.style.transition = 'width 1.1s cubic-bezier(0.4,0,0.2,1)';
+        el.style.width = el.dataset.width + '%';
+      });
+    }, 80);
+  });
 }
 
 // ─── Song Cards ───────────────────────────────────────────────────────────────
 function renderSongCards(tracks, filter = 'ALL') {
   const grid = $('songs-grid');
-  const filtered = filter === 'ALL' ? tracks
-    : tracks.filter(t => t.sentiment === filter || (filter !== 'POSITIVE' && filter !== 'NEUTRAL' && filter !== 'NEGATIVE'));
+  const filtered = filter === 'ALL' ? tracks : tracks.filter(t => t.sentiment === filter);
 
   if (filtered.length === 0) {
+    const names = { POSITIVE: 'positivas', NEUTRAL: 'neutras', NEGATIVE: 'negativas', MIXED: 'mixtas' };
     grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--white-25);padding:3rem;font-size:.9rem;">
-      No hay canciones ${filter === 'POSITIVE' ? 'positivas' : filter === 'NEGATIVE' ? 'negativas' : 'neutras'} en esta playlist.
-    </div>`;
+      No hay canciones ${names[filter] || ''} en esta playlist.</div>`;
     return;
   }
 
   const chipLabel = { POSITIVE: 'Positivo', NEUTRAL: 'Neutral', NEGATIVE: 'Negativo', MIXED: 'Mixto' };
 
   grid.innerHTML = filtered.map((t, i) => {
-    const sentiment = t.sentiment === 'MIXED' ? 'NEUTRAL' : (t.sentiment || 'NEUTRAL');
+    const chip = t.sentiment || 'NEUTRAL';
     return `
     <div class="song-card" role="listitem">
       <span class="song-num">${i + 1}</span>
@@ -701,14 +716,11 @@ function renderSongCards(tracks, filter = 'ALL') {
         <div class="song-name" title="${escHtml(t.name)}">${escHtml(t.name)}</div>
         <div class="song-artist">${escHtml(t.artist)}</div>
       </div>
-      <span class="sentiment-chip chip-${sentiment}">${chipLabel[t.sentiment] || 'Neutral'}</span>
+      <span class="sentiment-chip chip-${chip}">${chipLabel[chip] || 'Neutral'}</span>
     </div>`;
   }).join('');
 
-  // Trigger stagger animation
-  if (typeof window.animateSongCards === 'function') {
-    window.animateSongCards();
-  }
+  if (typeof window.animateSongCards === 'function') window.animateSongCards();
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
