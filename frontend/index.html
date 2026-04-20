@@ -61,47 +61,69 @@
         Cada playlist cuenta una historia. Usamos <strong>Amazon Comprehend</strong> para leer entre líneas y revelar si tu música es radiante, introspectiva o melancólica.
       </p>
 
-      <form id="analyze-form" class="input-card reveal-scale delay-3" autocomplete="off">
-        <div class="input-group" id="input-group-main">
-          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M9 18V5l12-2v13"/>
-            <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+      <!-- Auth Section -->
+      <div id="auth-section" class="auth-section reveal-fade delay-3" style="text-align: center; margin-top: 2rem;">
+        <button id="spotify-login-btn" class="btn-analyze" type="button" aria-label="Conectar con Spotify">
+          <svg class="spotify-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="width:24px;height:24px;margin-right:12px;">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
           </svg>
-          <input
-            id="playlist-url"
-            type="text"
-            placeholder="Pega el link de tu playlist de Spotify..."
-            spellcheck="false"
-            required
-            aria-label="URL de la playlist de Spotify"
-          />
-          <div class="input-glow" aria-hidden="true"></div>
-        </div>
+          <span class="btn-text">Conectar con Spotify</span>
+        </button>
+        <p class="auth-hint" style="margin-top: 1rem; color: var(--white-50); font-size: 0.9rem;">
+          Inicia sesión para analizar tus playlists.
+        </p>
+      </div>
 
-        <div class="form-bottom">
-          <label class="option-label" for="max-tracks">
-            <span>Canciones a analizar</span>
-            <select id="max-tracks" aria-label="Máximo de canciones">
-              <option value="20">20 — rápido</option>
-              <option value="50" selected>50 — recomendado</option>
-              <option value="100">100 — completo</option>
-            </select>
-          </label>
-
-          <button id="analyze-btn" type="submit" class="btn-analyze" aria-label="Analizar playlist">
-            <span class="btn-text">Analizar</span>
-            <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-              <path d="M5 12h14M12 5l7 7-7 7"/>
+      <!-- Analysis Form -->
+      <div id="analyze-section" class="hidden">
+        <form id="analyze-form" class="input-card reveal-scale delay-3" autocomplete="off">
+          <div class="input-group" id="input-group-main">
+            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M9 18V5l12-2v13"/>
+              <circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
             </svg>
-            <div class="btn-shine" aria-hidden="true"></div>
-          </button>
-        </div>
-      </form>
+            <input
+              id="playlist-url"
+              type="text"
+              placeholder="Pega el link de tu playlist de Spotify..."
+              spellcheck="false"
+              required
+              aria-label="URL de la playlist de Spotify"
+            />
+            <div class="input-glow" aria-hidden="true"></div>
+          </div>
+
+          <div class="form-bottom">
+            <label class="option-label" for="max-tracks">
+              <span>Canciones a analizar</span>
+              <select id="max-tracks" aria-label="Máximo de canciones">
+                <option value="20">20 — rápido</option>
+                <option value="50" selected>50 — recomendado</option>
+                <option value="100">100 — completo</option>
+              </select>
+            </label>
+
+            <button id="analyze-btn" type="submit" class="btn-analyze" aria-label="Analizar playlist">
+              <span class="btn-text">Analizar</span>
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <path d="M5 12h14M12 5l7 7-7 7"/>
+              </svg>
+              <div class="btn-shine" aria-hidden="true"></div>
+            </button>
+          </div>
+        </form>
+        <p class="auth-hint" style="margin-top: 1rem; color: var(--primary-green); font-size: 0.9rem; text-align: center;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:16px;height:16px;vertical-align:-3px;margin-right:4px;">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          Conectado a Spotify
+        </p>
+      </div>
 
       <p class="hero-hint reveal-fade delay-4">
         <span>Prueba con</span>
         <button class="hint-url" id="demo-btn" type="button" aria-label="Usar playlist de ejemplo">
-          Today's Top Hits — Spotify
+          Playlist de ejemplo
         </button>
       </p>
 

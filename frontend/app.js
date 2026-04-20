@@ -9,6 +9,11 @@
 // IMPORTANTE: Reemplazar con la URL de tu API Gateway después del deploy
 const API_URL = 'https://lunzatfoxb.execute-api.us-east-1.amazonaws.com/analyze';
 
+// ─── PKCE Config & Auth ───────────────────────────────────────────────────────
+const SPOTIFY_CLIENT_ID = '3f9d449a2ca24dcab6456ecad92e055c';
+const SPOTIFY_REDIRECT_URI = window.location.origin + window.location.pathname;
+let spotifyAccessToken = sessionStorage.getItem('spotify_access_token');
+
 // Para pruebas locales sin API, usar datos mock
 const USE_MOCK = false;
 
@@ -57,6 +62,9 @@ const MOCK_DATA = {
 const $ = id => document.getElementById(id);
 
 const heroSection     = $('hero');
+const authSection     = $('auth-section');
+const analyzeSection  = $('analyze-section');
+const spotifyLoginBtn = $('spotify-login-btn');
 const loadingSection  = $('loading');
 const resultsSection  = $('results');
 const form            = $('analyze-form');
@@ -89,7 +97,7 @@ let currentTracks = [];
 
 // ─── Demo / URL de prueba ─────────────────────────────────────────────────────
 demoBtn.addEventListener('click', () => {
-  urlInput.value = 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M';
+  urlInput.value = 'https://open.spotify.com/playlist/1BmqpSfccNZMPtkMpIl2FZ';
   urlInput.focus();
   urlInput.select();
 });
@@ -140,6 +148,101 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
+// ─── PKCE Auth Logic ──────────────────────────────────────────────────────────
+function generateRandomString(length) {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  for (let i = 0; i < length; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
+}
+
+async function generateCodeChallenge(codeVerifier) {
+  const data = new TextEncoder().encode(codeVerifier);
+  const digest = await window.crypto.subtle.digest('SHA-256', data);
+  return btoa(String.fromCharCode.apply(null, [...new Uint8Array(digest)]))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+async function handleSpotifyLogin() {
+  const verifier = generateRandomString(128);
+  const challenge = await generateCodeChallenge(verifier);
+  sessionStorage.setItem('spotify_code_verifier', verifier);
+
+  const params = new URLSearchParams({
+    client_id: SPOTIFY_CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: SPOTIFY_REDIRECT_URI,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+  });
+
+  window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+}
+
+async function handleSpotifyCallback() {
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  if (!code) return;
+
+  const verifier = sessionStorage.getItem('spotify_code_verifier');
+  if (!verifier) return;
+
+  try {
+    setLoading(true);
+    const body = new URLSearchParams({
+      client_id: SPOTIFY_CLIENT_ID,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: SPOTIFY_REDIRECT_URI,
+      code_verifier: verifier,
+    });
+
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body
+    });
+
+    if (!res.ok) throw new Error('Error al intercambiar el código OAuth');
+
+    const data = await res.json();
+    spotifyAccessToken = data.access_token;
+    sessionStorage.setItem('spotify_access_token', spotifyAccessToken);
+    
+    // Clear URL params
+    window.history.replaceState({}, document.title, window.location.pathname);
+  } catch (err) {
+    console.error('Auth error:', err);
+    showError('Error al autenticar con Spotify.');
+  } finally {
+    setLoading(false);
+  }
+}
+
+function updateAuthUI() {
+  if (spotifyAccessToken || USE_MOCK) {
+    authSection.classList.add('hidden');
+    analyzeSection.classList.remove('hidden');
+  } else {
+    authSection.classList.remove('hidden');
+    analyzeSection.classList.add('hidden');
+  }
+}
+
+if (spotifyLoginBtn) {
+  spotifyLoginBtn.addEventListener('click', handleSpotifyLogin);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  handleSpotifyCallback().then(() => {
+    updateAuthUI();
+  });
+});
+
 // ─── API Call ─────────────────────────────────────────────────────────────────
 async function callApi(playlistUrl, maxTracks) {
   // Paso 1
@@ -148,7 +251,11 @@ async function callApi(playlistUrl, maxTracks) {
   const res = await fetch(API_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ playlist_url: playlistUrl, max_tracks: maxTracks }),
+    body: JSON.stringify({ 
+      playlist_url: playlistUrl, 
+      max_tracks: maxTracks,
+      spotify_token: spotifyAccessToken
+    }),
   });
 
   // Paso 2

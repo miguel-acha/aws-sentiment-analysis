@@ -46,33 +46,60 @@ def _response(status_code: int, body: dict) -> dict:
 def handler(event: dict, context) -> dict:
     """
     Función principal de Lambda.
+    Compatible con HTTP API v2 (payload format 2.0) y REST API v1.
 
     Args:
-        event: Dict con { playlist_url, max_tracks? }
-        context: Lambda context (no se usa directamente)
+        event: Evento de API Gateway o invocación directa
+        context: Lambda context
 
     Returns:
         Response HTTP con statusCode, headers y body JSON
     """
-    print(f"[lambda_handler] Evento recibido: {json.dumps(event)}")
+    print(f"[lambda_handler] Evento recibido tipo={type(event).__name__}")
 
-    # ── Preflight CORS ───────────────────────────────────────────────────────
-    if event.get("httpMethod") == "OPTIONS":
+    # ── Normalizar event si llega como string ────────────────────────────────
+    # serverless invoke --data puede enviar el payload como string
+    if isinstance(event, str):
+        try:
+            event = json.loads(event)
+        except json.JSONDecodeError:
+            return _response(400, {"error": "Evento inválido: no es JSON"})
+
+    print(f"[lambda_handler] Evento: {json.dumps(event)}")
+
+    # ── Detectar formato del evento ──────────────────────────────────────────
+    # HTTP API v2 usa 'routeKey' y 'requestContext.http.method'
+    # REST API v1 usa 'httpMethod'
+    # Invocación directa (test) no tiene ninguno de los dos
+
+    # ── Preflight CORS (v1 y v2) ─────────────────────────────────────────────
+    http_method = (
+        event.get("httpMethod")                                          # REST v1
+        or (event.get("requestContext", {}).get("http", {}).get("method"))  # HTTP v2
+        or ""
+    )
+    if http_method.upper() == "OPTIONS":
         return _response(200, {"message": "OK"})
 
     # ── Parsear body ─────────────────────────────────────────────────────────
     try:
-        if isinstance(event.get("body"), str):
-            body = json.loads(event["body"])
-        elif isinstance(event.get("body"), dict):
-            body = event["body"]
+        raw_body = event.get("body")
+        if isinstance(raw_body, str):
+            body = json.loads(raw_body)
+        elif isinstance(raw_body, dict):
+            body = raw_body
+        elif raw_body is None:
+            # Invocación directa: el propio evento ES el body
+            body = event
         else:
-            body = event  # Invocación directa (test en consola Lambda)
+            body = event
     except json.JSONDecodeError as e:
         return _response(400, {"error": f"Body inválido: {str(e)}"})
 
+
     playlist_url = body.get("playlist_url", "").strip()
     max_tracks   = int(body.get("max_tracks", 50))
+    spotify_token = body.get("spotify_token", "").strip() or None
 
     if not playlist_url:
         return _response(400, {"error": "Se requiere 'playlist_url' en el body"})
@@ -84,7 +111,11 @@ def handler(event: dict, context) -> dict:
     try:
         # 1. Obtener canciones de Spotify
         print("[lambda_handler] Paso 1: Obteniendo tracks de Spotify...")
-        playlist_info, tracks = get_playlist_tracks(playlist_url, max_tracks=max_tracks)
+        playlist_info, tracks = get_playlist_tracks(
+            playlist_url, 
+            max_tracks=max_tracks, 
+            access_token=spotify_token
+        )
         print(f"[lambda_handler] Playlist: '{playlist_info['name']}' — {len(tracks)} tracks")
 
         if not tracks:
@@ -121,7 +152,6 @@ def handler(event: dict, context) -> dict:
                 "album":     t.get("album", ""),
                 "sentiment": t["sentiment"],
                 "scores":    t["scores"],
-                "popularity": t.get("popularity", 0),
             }
             for t in analyzed
         ]
