@@ -537,36 +537,36 @@ function renderResults(data) {
 function renderGauge(score, label) {
   if (gaugeChartInstance) gaugeChartInstance.destroy();
 
-  const needleColor = score > 0.15 ? '#1DB954' : score < -0.15 ? '#E8645A' : '#9BABCF';
+  const pct = ((score + 1) / 2) * 100;
+  const p = Math.max(0, Math.min(100, pct));
+  const needleColor = score > 0.15 ? '#1DB954' : score < -0.15 ? '#E8645A' : '#7B9CC0';
   const ctx = document.getElementById('gaugeChart').getContext('2d');
 
-  // 4 segmentos: rojo | gris | verde | transparente (mitad inferior invisible)
-  // Total = 200: los 3 colores = 100, transparente = 100
-  // Con rotation:180 empieza en 9h (izq) → arriba → 3h (der) = semicírculo superior
+  // Elegante Gauge: Un medidor semicircular que se llena de color acorde al porcentaje
   gaugeChartInstance = new Chart(ctx, {
     type: 'doughnut',
     data: {
       datasets: [{
-        data:            [33.33, 33.34, 33.33, 100],
-        backgroundColor: ['rgba(232,100,90,0.92)', 'rgba(80,95,125,0.75)', 'rgba(29,185,84,0.92)', 'rgba(0,0,0,0)'],
-        borderWidth:     0,
-        borderRadius:    5,
-        circumference:   360,
-        rotation:        180,
-        hoverOffset:     0,
+        data: [p, 100 - p],
+        backgroundColor: [needleColor, 'rgba(255,255,255,0.06)'],
+        borderWidth: 0,
+        borderRadius: [8, 0],
+        circumference: 180,
+        rotation: 270, // 270 empieza a la izquierda (9 en reloj), hasta la derecha (3)
       }]
     },
     options: {
-      responsive:          true,
-      maintainAspectRatio: false,
-      cutout:              '62%',
-      events:              [],
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 2, // Ancho es el doble que alto para semi-circulo
+      cutout: '72%',
+      events: [],
       plugins: {
-        legend:     { display: false },
-        tooltip:    { enabled: false },
+        legend: { display: false },
+        tooltip: { enabled: false },
         datalabels: { display: false },
       },
-      animation: { animateRotate: true, duration: 1200, easing: 'easeOutQuart' },
+      animation: { animateRotate: true, duration: 1400, easing: 'easeOutExpo' },
     }
   });
 
@@ -611,17 +611,18 @@ function renderDonut(percentages, counts) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: '66%',
+      cutout: '80%', // Reducido para un look delgado y moderno Premium
+      layout: { padding: 4 },
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: 'rgba(8,8,14,0.96)',
-          borderColor:     'rgba(255,255,255,.1)',
+          backgroundColor: 'rgba(8,8,14,0.98)',
+          borderColor:     'rgba(255,255,255,.05)',
           borderWidth:     1,
           titleColor:      '#fff',
-          bodyColor:       'rgba(255,255,255,.75)',
-          padding:         14,
-          cornerRadius:    10,
+          bodyColor:       'rgba(255,255,255,.8)',
+          padding:         12,
+          cornerRadius:    8,
           callbacks: {
             label: (ctx) => {
               const s = active[ctx.dataIndex];
@@ -630,15 +631,9 @@ function renderDonut(percentages, counts) {
             }
           }
         },
-        datalabels: {
-          color: '#fff',
-          font:  { weight: '800', size: 11 },
-          formatter: (val) => val > 7 ? `${Math.round(val)}%` : '',
-          textShadowBlur:  5,
-          textShadowColor: 'rgba(0,0,0,.9)',
-        }
+        datalabels: { display: false } // Eliminado el datalabels porque rompía el chart en móviles pequeños
       },
-      animation: { animateRotate: true, animateScale: true, duration: 1100, easing: 'easeOutQuart' }
+      animation: { animateRotate: true, animateScale: true, duration: 1200, easing: 'easeOutExpo' }
     }
   });
 
