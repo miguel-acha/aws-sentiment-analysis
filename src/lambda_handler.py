@@ -168,6 +168,7 @@ def handler(event: dict, context) -> dict:
                 "percentages":    summary["percentages"],
                 "weighted_score": summary["weighted_score"],
                 "vibe_label":     summary["vibe_label"],
+                "ai_interpretation": summary.get("ai_interpretation", "No interpretation available."),
             },
             "tracks":  tracks_payload,
             "png_url": png_url,  # None si S3 falló

@@ -1025,6 +1025,78 @@ img {
   white-space: nowrap;
 }
 
+/* ── AI Interpretation Card ─────────────────────────────────────────────────── */
+.ai-interpretation-card {
+  background: linear-gradient(135deg, rgba(22, 22, 32, 0.95) 0%, rgba(13, 13, 20, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 1.75rem 2rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(25px);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s var(--ease-out), box-shadow 0.3s, border-color 0.3s;
+}
+
+.ai-interpretation-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--green-bright), transparent);
+  opacity: 0.8;
+}
+
+.ai-interpretation-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 100% 0%, rgba(29, 185, 84, 0.08), transparent 50%);
+  pointer-events: none;
+}
+
+.ai-interpretation-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 55px rgba(0, 0, 0, 0.7);
+  border-color: rgba(29, 185, 84, 0.25);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 1rem;
+  position: relative;
+  z-index: 2;
+}
+
+.ai-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--green);
+  filter: drop-shadow(0 0 10px rgba(29, 185, 84, 0.5));
+}
+
+.ai-header h3 {
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--white-80);
+  margin: 0;
+}
+
+#ai-interpretation-text {
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--white);
+  font-weight: 300;
+  letter-spacing: .2px;
+  position: relative;
+  z-index: 2;
+}
+
 /* ── Charts Grid ──────────────────────────────────────────────────────────── */
 .charts-grid {
   display: grid;
@@ -1040,19 +1112,20 @@ img {
 }
 
 .chart-card {
-  background: linear-gradient(150deg, rgba(22, 22, 28, .98) 0%, rgba(13, 13, 18, .92) 100%);
-  border: 1px solid rgba(255, 255, 255, .05);
-  border-top: 1px solid rgba(255, 255, 255, .09);
+  background: linear-gradient(150deg, rgba(26, 26, 34, .95) 0%, rgba(13, 13, 18, .90) 100%);
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-top: 1px solid rgba(255, 255, 255, .15);
   border-radius: 20px;
   padding: 1.75rem 1.6rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .04);
-  backdrop-filter: blur(20px);
-  transition: transform .3s var(--ease-out), box-shadow .3s;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .55), inset 0 2px 0 rgba(255, 255, 255, .04);
+  backdrop-filter: blur(25px);
+  transition: transform .3s var(--ease-out), box-shadow .3s, border-color .3s;
 }
 
 .chart-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 55px rgba(0, 0, 0, .6);
+  box-shadow: 0 16px 55px rgba(0, 0, 0, .7);
+  border-color: rgba(29, 185, 84, .25);
 }
 
 .chart-card-header {
@@ -1344,13 +1417,15 @@ img {
   display: flex;
   align-items: center;
   gap: 11px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 13px;
+  background: linear-gradient(145deg, rgba(22, 22, 28, 0.6) 0%, rgba(13, 13, 18, 0.5) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   padding: 11px 13px;
-  transition: transform .22s var(--ease-out), background .2s, border-color .2s, box-shadow .2s;
+  transition: transform .25s var(--ease-out), background .25s, border-color .25s, box-shadow .25s;
   position: relative;
   overflow: hidden;
+  backdrop-filter: blur(12px);
 }
 
 .song-card::after {
@@ -1358,15 +1433,15 @@ img {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(135deg, transparent 60%, rgba(255, 255, 255, .015));
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, .02));
   pointer-events: none;
 }
 
 .song-card:hover {
   transform: translateY(-2px);
-  background: var(--bg-card-hover);
-  border-color: var(--border-hover);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, .4);
+  background: linear-gradient(145deg, rgba(28, 28, 36, 0.8) 0%, rgba(18, 18, 24, 0.75) 100%);
+  border-color: rgba(29, 185, 84, 0.2);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, .5);
 }
 
 .song-card:hover .song-num {

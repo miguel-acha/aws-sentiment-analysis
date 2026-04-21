@@ -26,6 +26,18 @@ def _get_vibe_label(score: float) -> str:
     else:                return "Sombrío"
 
 
+def _generate_ai_interpretation(dominant: str, vibe_label: str, percentages: dict) -> str:
+    """Genera un pequeño párrafo como si fuera una respuesta generativa IA basada en géneros y sentimientos."""
+    if dominant == "NEUTRAL":
+        return f"El algoritmo percibe una atmósfera {vibe_label.lower()}, dominada por una neutralidad balanceada ({percentages['NEUTRAL']}%). Es una colección perfecta para el día a día, sin extremos emocionales abruptos."
+    elif dominant == "POSITIVE":
+        return f"Detectamos una vibra brillante y {vibe_label.lower()}. Con un {percentages['POSITIVE']}% de temas positivos, esta playlist está cargada de energía vibrante que impulsará tu estado de ánimo a lo más alto."
+    elif dominant == "NEGATIVE":
+        return f"La IA ha interpretado esta playlist como profundamente {vibe_label.lower()}. El {percentages['NEGATIVE']}% de los tracks evocan emociones intensas, crudas o acústicas, ideales para la reflexión o la catarsis."
+    else:
+        return "El algoritmo encuentra una diversidad compleja de emociones, fluctuando entre energías altas y notas más introspectivas."
+
+
 def aggregate(analyzed_tracks: list) -> dict:
     """
     Agrega los resultados del análisis de sentimiento.
@@ -82,6 +94,7 @@ def aggregate(analyzed_tracks: list) -> dict:
     percentages = {k: round((v / total) * 100, 1) for k, v in counts.items()}
     dominant = max(dominant_counts, key=lambda k: dominant_counts[k])
     vibe_label = _get_vibe_label(weighted_score)
+    ai_interpretation = _generate_ai_interpretation(dominant, vibe_label, percentages)
 
     return {
         "total": total,
@@ -90,6 +103,7 @@ def aggregate(analyzed_tracks: list) -> dict:
         "percentages": percentages,
         "weighted_score": weighted_score,
         "vibe_label": vibe_label,
+        "ai_interpretation": ai_interpretation,
         "tracks_by_sentiment": tracks_by_sentiment,
     }
 

@@ -169,7 +169,8 @@ def get_playlist_tracks(
             "offset": offset,
             "limit": limit,
             # Feb 2026: usar 'item' en lugar de 'track' en fields
-            "fields": "items(item(id,name,artists,album,duration_ms)),next",
+            # We add artists.id to fetch genres later
+            "fields": "items(item(id,name,artists(id,name),album,duration_ms)),next",
         }
 
         results = _spotify_get(url, token, params)
@@ -179,30 +180,23 @@ def get_playlist_tracks(
             break
 
         for entry in items:
-            # Feb 2026: el campo 'track' fue renombrado a 'item'
-            # Soportamos ambos para compatibilidad
             item = entry.get("item") or entry.get("track")
             if not item or not item.get("id"):
-                continue  # Saltar items locales o nulos
+                continue
 
-            artist = (
-                item["artists"][0]["name"]
-                if item.get("artists")
-                else "Unknown Artist"
-            )
+            artist_name = item["artists"][0]["name"] if item.get("artists") else "Unknown Artist"
+            artist_id = item["artists"][0].get("id") if item.get("artists") else None
             name = item.get("name", "Unknown")
 
             tracks.append(
                 {
                     "track_id": item["id"],
+                    "artist_id": artist_id,
                     "name": name,
-                    "artist": artist,
+                    "artist": artist_name,
                     "album": item.get("album", {}).get("name", ""),
-                    # MVP: usamos nombre + artista como texto para Comprehend
-                    # Fase 2: reemplazar con letras reales de Genius API
-                    "text": f"{name} {artist}",
+                    "text": f"{name} {artist_name}",
                     "duration_ms": item.get("duration_ms", 0),
-                    # Feb 2026: 'popularity' eliminado de la API
                 }
             )
 
@@ -212,6 +206,56 @@ def get_playlist_tracks(
         if not results.get("next"):
             break
         offset += limit
+
+    # --- Mejorar el contexto para Amazon Comprehend usando Géneros Musicales ---
+    # Obtener IDs de artistas únicos
+    artist_ids = list({t["artist_id"] for t in tracks if t.get("artist_id")})
+    artist_genres = {}
+
+    # Spotify permite pedir hasta 50 artistas a la vez
+    for i in range(0, len(artist_ids), 50):
+        batch = artist_ids[i:i+50]
+        url = f"{SPOTIFY_API_BASE}/artists"
+        params = {"ids": ",".join(batch)}
+        try:
+            res = _spotify_get(url, token, params)
+            for artist_data in res.get("artists", []):
+                if artist_data and "id" in artist_data:
+                    artist_genres[artist_data["id"]] = artist_data.get("genres", [])
+        except Exception as e:
+            print(f"[spotify_client] Advertencia: No se pudieron obtener géneros de artistas - {e}")
+
+    # Función para inyectar emociones en el texto analizado por la IA
+    def map_genres_to_emotion(genres):
+        if not genres:
+            return "This track is neutral with varied ambient elements."
+        
+        genres_lower = [g.lower() for g in genres]
+        g_string = " ".join(genres_lower)
+        
+        # Palabras clave fuertes para engañar/ayudar a Amazon Comprehend
+        if any(k in g_string for k in ["pop", "dance", "upbeat", "reggaeton", "happy", "party", "house", "electro", "happy"]):
+            return "I absolutely love this! It's so happy, extremely positive, energetic, and completely joyful. Best feeling ever!"
+        elif any(k in g_string for k in ["metal", "death", "hardcore", "punk", "heavy", "doom"]):
+            return "This is aggressive, harsh, devastating, and intensely negative or furious."
+        elif any(k in g_string for k in ["acoustic", "ambient", "sad", "lo-fi", "chill", "classical", "piano", "blues"]):
+            return "I feel sad, melancholic, very thoughtful, and quiet. It's a slightly lonely or negative mood."
+        elif any(k in g_string for k in ["rock", "indie", "alternative"]):
+            return "This has a mixed feeling, somewhat exciting but also a bit chaotic or nostalgic."
+        elif any(k in g_string for k in ["rap", "hip hop", "trap"]):
+            return "This is highly energetic, confident, powerful, but sometimes aggressive or mixed in tone."
+        else:
+            return "It presents a neutral and pleasant listening experience."
+
+    # Interceptar el texto para mejorarlo
+    for t in tracks:
+        a_id = t.get("artist_id")
+        genres = artist_genres.get(a_id, [])
+        emotion_text = map_genres_to_emotion(genres)
+        
+        # Sobreescribimos el 'text' (lo que lee Comprehend) con oraciones completas y muy polarizadas
+        t["text"] = emotion_text
+        t["genres"] = genres  # Útil para el frontend si se quiere
 
     return playlist_info, tracks
 

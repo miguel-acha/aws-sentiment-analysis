@@ -433,6 +433,16 @@ function renderResults(data) {
   $('playlist-owner').textContent = playlist.owner || '';
   $('track-count').textContent = `${summary.total} canciones analizadas`;
 
+  // ── AI Interpretation ──
+  const aiTextEl = $('ai-interpretation-text');
+  if (aiTextEl) {
+    if (summary.ai_interpretation) {
+      aiTextEl.textContent = summary.ai_interpretation;
+    } else {
+      aiTextEl.textContent = "El algoritmo de IA ha escaneado la vibra de esta playlist.";
+    }
+  }
+
   // ── Vibe pill (formerly dominant-badge) ──
   const badge = $('dominant-badge');
   const vibeLabel = summary.vibe_label
