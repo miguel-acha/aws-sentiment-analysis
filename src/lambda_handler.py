@@ -22,7 +22,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from spotify_client import get_playlist_tracks
 from sentiment_analyzer import analyze_tracks
 from aggregator import aggregate
-from chart_generator import generate_report_png
 from s3_uploader import upload_report, ensure_bucket_exists
 
 
@@ -134,6 +133,8 @@ def handler(event: dict, context) -> dict:
         png_url = None
         try:
             print("[lambda_handler] Paso 4: Generando PNG...")
+            from chart_generator import generate_report_png
+
             png_bytes = generate_report_png(analyzed, summary, playlist_info)
 
             print("[lambda_handler] Paso 5: Subiendo a S3...")
@@ -155,6 +156,10 @@ def handler(event: dict, context) -> dict:
                 "album":     t.get("album", ""),
                 "sentiment": t["sentiment"],
                 "scores":    t["scores"],
+                "lyric_sentiment": t.get("lyric_sentiment"),
+                "lyric_scores": t.get("lyric_scores"),
+                "vibe_score": t.get("vibe_score"),
+                "audio_vibe_score": t.get("audio_vibe_score"),
             }
             for t in analyzed
         ]
@@ -167,6 +172,8 @@ def handler(event: dict, context) -> dict:
                 "counts":         summary["counts"],
                 "percentages":    summary["percentages"],
                 "weighted_score": summary["weighted_score"],
+                "average_track_score": summary.get("average_track_score"),
+                "sentiment_balance": summary.get("sentiment_balance"),
                 "vibe_label":     summary["vibe_label"],
                 "ai_interpretation": summary.get("ai_interpretation", "No interpretation available."),
             },

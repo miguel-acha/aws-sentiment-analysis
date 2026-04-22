@@ -1,73 +1,79 @@
 """
 aggregator.py
 -------------
-Agrega los resultados del análisis de sentimiento.
+Agrega resultados del analisis track por track.
 
-Cambios:
-- MIXED se cuenta por separado (counts y percentages incluyen MIXED)
-- dominant se calcula mapeando MIXED al sentimiento más cercano
-- vibe_label expandido a 8 etiquetas descriptivas sin emojis
+Usa preferentemente `vibe_score` y el `sentiment` final ajustado del pipeline
+hibrido (letra + senales musicales), con fallback a los scores clasicos.
 """
 
 
-def _sentiment_to_score(scores: dict) -> float:
-    """Convierte los scores de Comprehend a escalar entre -1.0 y +1.0."""
-    return round(scores.get("Positive", 0) - scores.get("Negative", 0), 4)
+def _sentiment_to_score(track_or_scores: dict) -> float:
+    if "vibe_score" in track_or_scores:
+        return round(track_or_scores.get("vibe_score", 0.0), 4)
+
+    scores = track_or_scores.get("scores", track_or_scores)
+    return round(scores.get("Positive", 0.0) - scores.get("Negative", 0.0), 4)
 
 
 def _get_vibe_label(score: float) -> str:
-    """Etiqueta descriptiva basada en el score ponderado (-1 a +1)."""
-    if score >= 0.55:    return "Eufórico"
-    elif score >= 0.30:  return "Radiante"
-    elif score >= 0.10:  return "Optimista"
-    elif score >= -0.10: return "Equilibrado"
-    elif score >= -0.30: return "Melancólico"
-    elif score >= -0.55: return "Introspectivo"
-    else:                return "Sombrío"
+    if score >= 0.55:
+        return "Euforico"
+    if score >= 0.30:
+        return "Radiante"
+    if score >= 0.08:
+        return "Fiestero"
+    if score >= -0.05:
+        return "Equilibrado"
+    if score >= -0.25:
+        return "Melancolico"
+    if score >= -0.50:
+        return "Introspectivo"
+    return "Sombrio"
 
 
 def _generate_ai_interpretation(dominant: str, vibe_label: str, percentages: dict) -> str:
-    """Genera un pequeño párrafo como si fuera una respuesta generativa IA basada en géneros y sentimientos."""
-    if dominant == "NEUTRAL":
-        return f"El algoritmo percibe una atmósfera {vibe_label.lower()}, dominada por una neutralidad balanceada ({percentages['NEUTRAL']}%). Es una colección perfecta para el día a día, sin extremos emocionales abruptos."
-    elif dominant == "POSITIVE":
-        return f"Detectamos una vibra brillante y {vibe_label.lower()}. Con un {percentages['POSITIVE']}% de temas positivos, esta playlist está cargada de energía vibrante que impulsará tu estado de ánimo a lo más alto."
-    elif dominant == "NEGATIVE":
-        return f"La IA ha interpretado esta playlist como profundamente {vibe_label.lower()}. El {percentages['NEGATIVE']}% de los tracks evocan emociones intensas, crudas o acústicas, ideales para la reflexión o la catarsis."
-    else:
-        return "El algoritmo encuentra una diversidad compleja de emociones, fluctuando entre energías altas y notas más introspectivas."
+    if dominant == "POSITIVE":
+        return (
+            f"El analisis hibrido detecta una vibra {vibe_label.lower()}, "
+            f"con {percentages['POSITIVE']}% de tracks en energia positiva o bailable."
+        )
+    if dominant == "NEGATIVE":
+        return (
+            f"La playlist cae hacia un tono {vibe_label.lower()}, con "
+            f"{percentages['NEGATIVE']}% de tracks mas tensos, oscuros o introspectivos."
+        )
+    if dominant == "MIXED":
+        return (
+            f"Predomina una mezcla emocional compleja. La playlist suena {vibe_label.lower()}, "
+            "pero alterna entre impulso, tension y contraste."
+        )
+    return (
+        f"La coleccion se siente {vibe_label.lower()}, con un balance importante de tracks "
+        f"neutros ({percentages['NEUTRAL']}%) y cambios suaves de energia."
+    )
 
 
-def aggregate(analyzed_tracks: list) -> dict:
-    """
-    Agrega los resultados del análisis de sentimiento.
-
-    Args:
-        analyzed_tracks: Lista de dicts con { sentiment, scores, ... }
-
-    Returns:
-        Dict con { total, dominant, counts (incluye MIXED), percentages,
-                   weighted_score, vibe_label, tracks_by_sentiment }
-    """
-    SENTIMENTS = ("POSITIVE", "NEUTRAL", "NEGATIVE", "MIXED")
+def aggregate(analyzed_tracks: list[dict]) -> dict:
+    sentiments = ("POSITIVE", "NEUTRAL", "NEGATIVE", "MIXED")
 
     if not analyzed_tracks:
         return {
             "total": 0,
             "dominant": "NEUTRAL",
-            "counts": {s: 0 for s in SENTIMENTS},
-            "percentages": {s: 0.0 for s in SENTIMENTS},
+            "counts": {s: 0 for s in sentiments},
+            "percentages": {s: 0.0 for s in sentiments},
             "weighted_score": 0.0,
+            "average_track_score": 0.0,
+            "sentiment_balance": 0.0,
             "vibe_label": "Sin datos",
-            "tracks_by_sentiment": {s: [] for s in SENTIMENTS},
+            "ai_interpretation": "No hay suficientes canciones para interpretar esta playlist.",
+            "tracks_by_sentiment": {s: [] for s in sentiments},
         }
 
-    counts = {s: 0 for s in SENTIMENTS}
-    tracks_by_sentiment = {s: [] for s in SENTIMENTS}
+    counts = {s: 0 for s in sentiments}
+    tracks_by_sentiment = {s: [] for s in sentiments}
     total_weighted_score = 0.0
-
-    # Para dominante, MIXED se mapea al sentimiento más cercano
-    dominant_counts = {"POSITIVE": 0, "NEUTRAL": 0, "NEGATIVE": 0}
 
     for track in analyzed_tracks:
         sentiment = track.get("sentiment", "NEUTRAL")
@@ -76,23 +82,17 @@ def aggregate(analyzed_tracks: list) -> dict:
 
         counts[sentiment] += 1
         tracks_by_sentiment[sentiment].append(track)
-        total_weighted_score += _sentiment_to_score(track.get("scores", {}))
-
-        # Dominant: mapear MIXED al más alto
-        if sentiment == "MIXED":
-            raw_scores = track.get("scores", {})
-            mapped = max(
-                ["POSITIVE", "NEGATIVE", "NEUTRAL"],
-                key=lambda s: raw_scores.get(s.capitalize(), 0),
-            )
-        else:
-            mapped = sentiment
-        dominant_counts[mapped] = dominant_counts.get(mapped, 0) + 1
+        total_weighted_score += _sentiment_to_score(track)
 
     total = len(analyzed_tracks)
-    weighted_score = round(total_weighted_score / total, 4) if total > 0 else 0.0
-    percentages = {k: round((v / total) * 100, 1) for k, v in counts.items()}
-    dominant = max(dominant_counts, key=lambda k: dominant_counts[k])
+    average_track_score = round(total_weighted_score / total, 4)
+    percentages = {key: round((value / total) * 100, 1) for key, value in counts.items()}
+    dominant = max(counts, key=lambda key: counts[key])
+    sentiment_balance = round((counts["POSITIVE"] - counts["NEGATIVE"]) / total, 4)
+    weighted_score = round(
+        max(-1.0, min(1.0, average_track_score * 0.65 + sentiment_balance * 0.35)),
+        4,
+    )
     vibe_label = _get_vibe_label(weighted_score)
     ai_interpretation = _generate_ai_interpretation(dominant, vibe_label, percentages)
 
@@ -102,24 +102,9 @@ def aggregate(analyzed_tracks: list) -> dict:
         "counts": counts,
         "percentages": percentages,
         "weighted_score": weighted_score,
+        "average_track_score": average_track_score,
+        "sentiment_balance": sentiment_balance,
         "vibe_label": vibe_label,
         "ai_interpretation": ai_interpretation,
         "tracks_by_sentiment": tracks_by_sentiment,
     }
-
-
-if __name__ == "__main__":
-    mock = [
-        {"name": "Happy",          "artist": "Pharrell",  "sentiment": "POSITIVE", "scores": {"Positive": 0.95, "Negative": 0.01, "Neutral": 0.04, "Mixed": 0.0}},
-        {"name": "Creep",          "artist": "Radiohead", "sentiment": "NEGATIVE", "scores": {"Positive": 0.02, "Negative": 0.90, "Neutral": 0.08, "Mixed": 0.0}},
-        {"name": "Blinding Lights","artist": "The Weeknd","sentiment": "POSITIVE", "scores": {"Positive": 0.80, "Negative": 0.05, "Neutral": 0.15, "Mixed": 0.0}},
-        {"name": "Hurt",           "artist": "NIN",       "sentiment": "NEGATIVE", "scores": {"Positive": 0.01, "Negative": 0.95, "Neutral": 0.04, "Mixed": 0.0}},
-        {"name": "Shape of You",   "artist": "Ed Sheeran","sentiment": "MIXED",    "scores": {"Positive": 0.45, "Negative": 0.35, "Neutral": 0.10, "Mixed": 0.10}},
-    ]
-    result = aggregate(mock)
-    print(f"Total: {result['total']}")
-    print(f"Dominante: {result['dominant']}")
-    print(f"Counts: {result['counts']}")
-    print(f"Porcentajes: {result['percentages']}")
-    print(f"Score ponderado: {result['weighted_score']}")
-    print(f"Vibe: {result['vibe_label']}")

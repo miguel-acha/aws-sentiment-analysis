@@ -1,6 +1,6 @@
 service: spotifysentiment
 
-frameworkVersion: '3'
+frameworkVersion: '3.40.0'
 
 useDotenv: true
 
@@ -8,10 +8,10 @@ provider:
   name: aws
   httpApi:
     cors: true
-  runtime: python3.12
+  runtime: python3.11
   region: us-east-1
   memorySize: 512
-  timeout: 29
+  timeout: 120
   environment:
     SPOTIFY_CLIENT_ID: ${env:SPOTIFY_CLIENT_ID}
     SPOTIFY_CLIENT_SECRET: ${env:SPOTIFY_CLIENT_SECRET}
@@ -49,14 +49,13 @@ functions:
 layers:
   pythonDeps:
     path: layer
-    description: "Layer containing matplotlib, pillow, numpy, spotipy, boto3"
+    description: "Layer containing lightweight runtime deps for lyrics lookups"
     compatibleRuntimes:
-      - python3.12
+      - python3.11
 
 package:
   patterns:
     - "!node_modules/**"
-    - "!layer/**"
     - "!.serverless/**"
     - "!.git/**"
     - "!.env"

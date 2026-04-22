@@ -22,6 +22,6 @@
   },
   "homepage": "https://github.com/miguel-acha/aws-sentiment-analysis#readme",
   "devDependencies": {
-    "serverless": "^3.40.0"
+    "serverless": "3.40.0"
   }
 }
