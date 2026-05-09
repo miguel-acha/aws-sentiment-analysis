@@ -6,11 +6,14 @@
 'use strict';
 
 // ─── Configuración ────────────────────────────────────────────────────────────
-const API_URL = 'https://lunzatfoxb.execute-api.us-east-1.amazonaws.com/analyze';
+const PROD_API_URL = 'https://lunzatfoxb.execute-api.us-east-1.amazonaws.com/analyze';
+const IS_LOCALHOST = ['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname);
+const API_URL = window.VIBECHECK_API_URL || (IS_LOCALHOST ? `${window.location.origin}/analyze` : PROD_API_URL);
 
 // ─── PKCE Config & Auth ───────────────────────────────────────────────────────
 const SPOTIFY_CLIENT_ID = '3f9d449a2ca24dcab6456ecad92e055c';
-const SPOTIFY_REDIRECT_URI = 'https://main.d3i36ughrz7z5g.amplifyapp.com/';
+const SPOTIFY_REDIRECT_URI = window.VIBECHECK_SPOTIFY_REDIRECT_URI
+  || (IS_LOCALHOST ? `${window.location.origin}/` : 'https://main.d3i36ughrz7z5g.amplifyapp.com/');
 let spotifyAccessToken = sessionStorage.getItem('spotify_access_token');
 let spotifyUserProfile = null;
 let spotifyUserPlaylists = [];
@@ -200,13 +203,19 @@ async function handleSpotifyCallback() {
       code_verifier: verifier,
     });
 
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), 15000);
     const res = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body,
-    });
+      signal: abort.signal,
+    }).finally(() => clearTimeout(timer));
 
-    if (!res.ok) throw new Error('Error al intercambiar el código OAuth');
+    if (!res.ok) {
+      const errBody = await res.json().catch(() => ({}));
+      throw new Error(errBody.error_description || errBody.error || 'Error al intercambiar el código OAuth');
+    }
 
     const data = await res.json();
     spotifyAccessToken = data.access_token;
@@ -360,10 +369,21 @@ if (refreshPlaylistsBtn) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  handleSpotifyCallback().then(async () => {
-    if (spotifyAccessToken) await fetchSpotifyUserData();
-    updateAuthUI();
-  });
+  handleSpotifyCallback()
+    .then(async () => {
+      if (spotifyAccessToken) await fetchSpotifyUserData();
+    })
+    .catch(err => {
+      console.error('[VibeCheck] Auth flow error:', err);
+      if (spotifyLoginBtn) {
+        spotifyLoginBtn.disabled = false;
+        const t = spotifyLoginBtn.querySelector('.btn-text');
+        if (t) t.textContent = 'Conectar con Spotify';
+      }
+    })
+    .finally(() => {
+      updateAuthUI();
+    });
 });
 
 // ─── API Call ─────────────────────────────────────────────────────────────────
