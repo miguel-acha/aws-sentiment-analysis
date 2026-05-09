@@ -192,7 +192,8 @@ async function handleSpotifyCallback() {
   if (!verifier) return;
 
   const loginBtn = spotifyLoginBtn;
-  if (loginBtn) { loginBtn.disabled = true; loginBtn.querySelector('.btn-text').textContent = 'Autenticando...'; }
+  const btnText = loginBtn ? loginBtn.querySelector('.btn-text') : null;
+  if (loginBtn) { loginBtn.disabled = true; if (btnText) btnText.textContent = 'Autenticando...'; }
 
   try {
     const body = new URLSearchParams({
@@ -220,13 +221,13 @@ async function handleSpotifyCallback() {
     const data = await res.json();
     spotifyAccessToken = data.access_token;
     sessionStorage.setItem('spotify_access_token', spotifyAccessToken);
-
     window.history.replaceState({}, document.title, window.location.pathname);
     sessionStorage.removeItem('spotify_code_verifier');
   } catch (err) {
     console.error('Auth error:', err);
-    showError('Error al autenticar con Spotify. Intentá de nuevo.');
-    if (loginBtn) { loginBtn.disabled = false; loginBtn.querySelector('.btn-text').textContent = 'Conectar con Spotify'; }
+    showError('Error al autenticar con Spotify: ' + err.message);
+  } finally {
+    if (loginBtn) { loginBtn.disabled = false; if (btnText) btnText.textContent = 'Conectar con Spotify'; }
   }
 }
 
@@ -277,9 +278,7 @@ async function fetchSpotifyUserData() {
       headers: { Authorization: `Bearer ${spotifyAccessToken}` }
     });
     if (!profileRes.ok) {
-      console.warn('[VibeCheck] Token inválido o expirado.');
-      spotifyAccessToken = null;
-      sessionStorage.removeItem('spotify_access_token');
+      console.warn('[VibeCheck] No se pudo obtener el perfil de Spotify, continuando sin datos de usuario.');
       return;
     }
     spotifyUserProfile = await profileRes.json();
